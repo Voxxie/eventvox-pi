@@ -144,6 +144,31 @@ systemctl daemon-reload
 systemctl --global enable eventvox-pi-agent.service >/dev/null 2>&1 || true
 loginctl enable-linger "$KIOSK_USER"
 
+# --- ook bij bijwerken: toetsenbord en opstartscherm --------------------------------------------------------------------
+
+step "labwc: NumLock aan (veel NFC-lezers en scanners typen hun cijfers op het numerieke toetsenblok)"
+mkdir -p "$KIOSK_HOME/.config/labwc"
+cat > "$KIOSK_HOME/.config/labwc/rc.xml" <<'EOF'
+<?xml version="1.0"?>
+<!-- EventVOX-Pi (install.sh): NumLock aan, anders worden de cijfers van het numerieke toetsenblok pijltjes en Home/End -->
+<labwc_config>
+  <keyboard>
+    <numlock>on</numlock>
+  </keyboard>
+</labwc_config>
+EOF
+# Geen "Last login" of welkomsttekst op het scherm voordat de kiosk start
+touch "$KIOSK_HOME/.hushlogin"
+chown -R "$KIOSK_USER:$KIOSK_USER" "$KIOSK_HOME/.config/labwc" "$KIOSK_HOME/.hushlogin"
+
+if [ -f pi/splash.tga ] && apt-cache show rpi-splash-screen-support >/dev/null 2>&1; then
+  if ! cmp -s pi/splash.tga /lib/firmware/logo.tga; then
+    step "Opstartscherm met het EventVOX-logo (in plaats van de Linux-tekst)"
+    dpkg -s rpi-splash-screen-support >/dev/null 2>&1 || DEBIAN_FRONTEND=noninteractive apt-get install -y -q rpi-splash-screen-support initramfs-tools
+    configure-splash pi/splash.tga || echo "    Opstartscherm instellen lukte niet; de Pi start gewoon, met tekst." >&2
+  fi
+fi
+
 if [ "$UPDATE" = 1 ]; then
   step "Bijgewerkt; de Pi herstart (update.sh)"
   exit 0

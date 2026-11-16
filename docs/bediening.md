@@ -23,7 +23,7 @@ In de lijst krijgt een Pi met een oudere versie een oranje label (*App 1.0.0*); 
 Een USB-NFC-lezer werkt op twee manieren:
 
 - **Een lezer die zelf typt** ("keyboard emulation", zoals de ACS ACR1281U-C2 of R80UF): typt het nummer met Enter, net
-  als een barcodescanner. Werkt meteen.
+  als een barcodescanner. Werkt meteen (NumLock staat aan: veel lezers typen hun cijfers op het numerieke toetsenblok).
 - **Een gewone kaartlezer** (PC/SC, zoals de veelgebruikte **ACS ACR122U**): die piept alleen. EventVOX-Pi leest het
   nummer zelf uit en typt het met Enter in de scanterminal. Een kaart die op de lezer blijft liggen telt één keer.
 

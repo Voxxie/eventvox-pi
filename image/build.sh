@@ -55,6 +55,11 @@ chmod 755 "$MNT/usr/sbin/policy-rc.d"
 echo "==> Pakketten installeren: $PACKAGES"
 chroot "$MNT" apt-get update -q
 chroot "$MNT" env DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends $PACKAGES
+echo "==> Opstartscherm met het EventVOX-logo"
+chroot "$MNT" env DEBIAN_FRONTEND=noninteractive apt-get install -y -q rpi-splash-screen-support initramfs-tools
+cp "$ROOT_DIR/pi/splash.tga" "$MNT/tmp/eventvox-splash.tga"
+chroot "$MNT" configure-splash /tmp/eventvox-splash.tga || echo "::warning::opstartscherm instellen mislukt"
+rm -f "$MNT/tmp/eventvox-splash.tga"
 chroot "$MNT" apt-get clean
 rm -rf "$MNT/var/lib/apt/lists/"*
 

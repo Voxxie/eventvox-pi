@@ -37,7 +37,9 @@
 ## Wat het installatiescript nog meer doet
 
 - Geen vertaalbalk, inlog- of wachtwoordvragen in Chromium (policy)
-- Geen opstartlogo of meldingen op het scherm, het scherm gaat nooit uit, geluid via HDMI (`kiosk.sh` kiest bij elke start
+- Een **opstartscherm met het EventVOX-logo** (`pi/splash.tga`, via `rpi-splash-screen-support`) in plaats van de Linux-tekst
+- NumLock aan in labwc (veel NFC-lezers en scanners typen hun cijfers op het numerieke toetsenblok)
+- Geen meldingen op het scherm, het scherm gaat nooit uit, geluid via HDMI (`kiosk.sh` kiest bij elke start
   de HDMI-geluidskaart van het aangesloten scherm)
 - Eigen naam en SSH-sleutels per Pi (`eventvox-<serienummer>`), ook als je een SD-kaart kloont
 - Automatische beveiligingsupdates
