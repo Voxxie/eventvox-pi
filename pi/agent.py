@@ -348,6 +348,11 @@ class Agent:
             s['wifi'] = w
         if self.clock_skew is not None:
             s['clock_skew_s'] = self.clock_skew
+        # Ook leeg: zo weet EventVOX dat deze versie wifi-netwerken kan ontvangen (kiosk_wifi)
+        wifi_done = read_json('wifi-result.json', {})
+        s['wifi_version'] = wifi_done.get('version', '') if isinstance(wifi_done.get('version'), str) else ''
+        if wifi_done.get('result'):
+            s['wifi_result'] = str(wifi_done['result'])[:200]
         if update.get('checked_at'):
             s['update'] = {'checked_at': update['checked_at'], 'result': str(update.get('result', ''))[:160]}
         return s
@@ -386,6 +391,8 @@ class Agent:
                 self.command(msg.get('value', ''))
             elif kind == 'settings':
                 self.settings(msg.get('value', ''))
+            elif kind == 'wifi':
+                self.wifi(msg.get('value', ''))
             elif kind == 'diagnostics':
                 self.log.add('Diagnose gevraagd door EventVOX')
                 self.diag = self.log.text() + '\n' + self.diag_extra()
@@ -458,6 +465,27 @@ class Agent:
         self.log.add('Instellingen uit EventVOX: ' + (', '.join(sorted(applied)) or 'weer die van de Pi'))
         self.push(True)
 
+    def wifi(self, raw):
+        """Wifi-netwerken uit EventVOX: alleen een andere versie; via sudo naar wifi.py (stdin, nooit in een bestand)"""
+        try:
+            o = json.loads(raw)
+            version = o['version']
+            if not isinstance(version, str) or not re.fullmatch(r'[0-9a-f]{16}', version) or not isinstance(o.get('networks', []), list):
+                return
+        except (ValueError, KeyError, TypeError):
+            return
+        with self.lock:
+            if version == read_json('wifi-result.json', {}).get('version') or getattr(self, 'wifi_busy', False):
+                return
+            self.wifi_busy = True
+        try:
+            self.root('wifi', json.dumps({'version': version, 'networks': o.get('networks') or []}))
+            done = read_json('wifi-result.json', {})
+            self.log.add('Wifi uit EventVOX: ' + str(done.get('result', 'geen uitkomst'))[:200])
+        finally:
+            self.wifi_busy = False
+        self.push(True)
+
     # --- acties ---
 
     def reload(self):
@@ -483,14 +511,19 @@ class Agent:
         except (OSError, ValueError, KeyError, RuntimeError) as e:
             self.log.add('Browser herstarten mislukt: ' + str(e))
 
-    def root(self, action):
-        """Pi herstarten of bijwerken (als root, via sudo; alleen deze twee)"""
-        self.log.add(('Pi herstarten' if action == 'reboot' else 'Bijwerken gestart') + (' (proef, niet echt)' if DRYRUN else ''))
+    def root(self, action, stdin=None):
+        """Pi herstarten, bijwerken of wifi zetten (als root, via sudo; alleen deze drie). stdin: invoer (wifi)"""
+        if action != 'wifi':
+            self.log.add(('Pi herstarten' if action == 'reboot' else 'Bijwerken gestart') + (' (proef, niet echt)' if DRYRUN else ''))
         if DRYRUN:
             with open(path('dryrun-actions'), 'a') as f:
                 f.write(action + '\n')
+            if action == 'wifi' and os.environ.get('EVX_PI_WIFI'):
+                # Tests: wifi.py zonder sudo, met een nagebootste nmcli (EVX_PI_WIFI = pad naar wifi.py)
+                subprocess.run([sys.executable, os.environ['EVX_PI_WIFI']], input=stdin, capture_output=True, text=True,
+                               env={**os.environ, 'EVX_PI_STATE': STATE_DIR})
             return
-        r = subprocess.run(['sudo', '-n', ROOT_HELPER, action], capture_output=True, text=True)
+        r = subprocess.run(['sudo', '-n', ROOT_HELPER, action], input=stdin, capture_output=True, text=True, timeout=180)
         if r.returncode != 0:
             self.log.add(f'{action} mislukt: ' + (r.stderr or r.stdout).strip()[:200])
 

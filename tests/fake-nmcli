@@ -1,0 +1,10 @@
+#!/bin/bash
+# Nagebootste nmcli voor de tests: "connection show" geeft de namen uit $FAKE_NM/cons, add/delete werken die lijst bij
+# en elke aanroep komt in $FAKE_NM/calls (één regel, argumenten gescheiden door |)
+(IFS='|'; echo "$*") >> "$FAKE_NM/calls"
+case "$1 $2" in
+  "-t -f") cat "$FAKE_NM/cons" 2>/dev/null ;;
+  "connection add") n=""; prev=""; for a in "$@"; do [ "$prev" = "con-name" ] && n="$a"; prev="$a"; done; echo "$n" >> "$FAKE_NM/cons" ;;
+  "connection delete") grep -vx "$3" "$FAKE_NM/cons" > "$FAKE_NM/cons.tmp"; mv "$FAKE_NM/cons.tmp" "$FAKE_NM/cons" ;;
+esac
+exit 0

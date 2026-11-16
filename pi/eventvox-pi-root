@@ -1,7 +1,9 @@
 #!/bin/bash
-# Wat de agent als root mag (via sudo, zie /etc/sudoers.d/eventvox-pi): alleen de Pi herstarten en bijwerken.
+# Wat de agent als root mag (via sudo, zie /etc/sudoers.d/eventvox-pi): de Pi herstarten, bijwerken en de wifi-netwerken
+# uit EventVOX zetten (de lijst via stdin, gecontroleerd door wifi.py).
 case "${1:-}" in
   reboot) exec systemctl reboot ;;
   update) exec systemctl start --no-block eventvox-pi-update.service ;;
-  *) echo "Gebruik: eventvox-pi-root reboot|update" >&2; exit 2 ;;
+  wifi) exec /usr/bin/python3 /opt/eventvox-pi/wifi.py ;;
+  *) echo "Gebruik: eventvox-pi-root reboot|update|wifi" >&2; exit 2 ;;
 esac

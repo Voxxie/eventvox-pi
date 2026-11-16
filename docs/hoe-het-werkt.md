@@ -5,9 +5,9 @@
                        │ debugpoort 127.0.0.1:9222        ▲ window.WebKiosk
                        ▼                                  │
                     agent.py ──────────────────────────────┘
-                       │ sudo (alleen reboot en update)
+                       │ sudo (alleen reboot, update en wifi)
                        ▼
-                 eventvox-pi-root ──► systemctl reboot / eventvox-pi-update.service (update.sh)
+                 eventvox-pi-root ──► systemctl reboot / eventvox-pi-update.service (update.sh) / wifi.py (nmcli)
 ```
 
 - **labwc** (Wayland) start na het automatisch inloggen op het scherm en start **`kiosk.sh`**: Chromium als kiosk op de
@@ -17,17 +17,19 @@
   alleen op de Pi zelf, niet op het netwerk. De agent zet in de scanterminal `window.WebKiosk` (`bridge.js`): dezelfde
   koppeling als de kiosk-app op een Zebra. De scanterminal geeft daarmee bij elke heartbeat de staat van de Pi mee aan
   EventVOX, en geeft opdrachten en instellingen uit EventVOX door aan de agent.
-- Herstarten en bijwerken gaan als root via **`eventvox-pi-root`**, het enige wat de agent met sudo mag.
+- Herstarten, bijwerken en wifi gaan als root via **`eventvox-pi-root`**, het enige wat de agent met sudo mag.
+- **`wifi.py`** zet de wifi-netwerken uit EventVOX (verbindingen `evx-…` in NetworkManager). De lijst komt via stdin,
+  nooit in een bestand; het script controleert hem streng en raakt alleen zijn eigen `evx-`-verbindingen aan.
 - **`update.sh`** werkt bij (zie [bijwerken](bijwerken-en-releases.md)).
 
 ## Op de Pi
 
 | Pad | Wat |
 |---|---|
-| `/opt/eventvox-pi/` | `agent.py`, `bridge.js`, `locate.js` (Zoek mij), `kiosk.sh`, `update.sh`, `VERSION` |
-| `/usr/local/sbin/eventvox-pi-root` | Herstarten en bijwerken als root |
+| `/opt/eventvox-pi/` | `agent.py`, `bridge.js`, `locate.js` (Zoek mij), `kiosk.sh`, `update.sh`, `wifi.py`, `VERSION` (alles van root, niet te wijzigen door de kiosk-gebruiker) |
+| `/usr/local/sbin/eventvox-pi-root` | Herstarten, bijwerken en wifi als root |
 | `/etc/eventvox-pi/config` | Het adres (`URL`) en de kiosk-gebruiker (`KIOSK_USER`) |
-| `/var/lib/eventvox-pi/` | De staat: uitgevoerde opdrachten, instellingen uit EventVOX, `log.txt`, de uitkomst van het bijwerken |
+| `/var/lib/eventvox-pi/` | De staat: uitgevoerde opdrachten, instellingen uit EventVOX, `log.txt`, de uitkomst van het bijwerken en van wifi (zonder wachtwoorden) |
 | `~/.config/eventvox-kiosk/` | Het Chromium-profiel (hier bewaart de scanterminal zijn koppeling met EventVOX) |
 | `/etc/sudoers.d/eventvox-pi` | Wat de agent als root mag |
 

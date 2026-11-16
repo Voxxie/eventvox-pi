@@ -30,6 +30,14 @@ en worden één keer uitgevoerd.
 | **Nu bijwerken** | De nieuwste EventVOX-Pi en de updates van de Pi zelf; daarna herstart hij, alleen als er iets nieuws was |
 | **Zoek mij** | 30 seconden een knipperend scherm en piepen via het scherm; een tik of toets stopt het. Een Pi heeft geen GPS: geen locatie |
 
+## Wifi uit EventVOX
+
+In de admin-tenant van EventVOX (**Platform → Alle terminals → Wifi-netwerken voor de terminals**) beheer je
+wifi-netwerken voor alle organisaties of voor gekozen organisaties. Een Pi zet ze binnen een minuut zelf
+(NetworkManager), en haalt een netwerk weg als het in EventVOX verwijderd wordt. Netwerken die je in Raspberry Pi Imager
+of met de hand instelde, blijven altijd staan. De kaart van de terminal toont bij *Wifi uit EventVOX* welke netwerken
+erop staan. Wachtwoorden komen nooit in het logboek.
+
 ## Diagnose
 
 **Diagnose opvragen** haalt het logboek van de Pi op (opstarten, opdrachten, bijwerken, browsercrashes, temperatuur,

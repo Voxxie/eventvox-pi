@@ -40,6 +40,8 @@ before(async () => {
     stateDir = mkdtempSync(join(tmpdir(), 'evx-pi-'));
     agent = spawn('python3', [AGENT], {
         env: { ...process.env, EVX_PI_CDP: `http://127.0.0.1:${PORT}`, EVX_PI_STATE: stateDir, EVX_PI_DRYRUN: '1', EVX_PI_TICK: '0.3',
+            // Wifi: wifi.py zonder sudo, met een nagebootste nmcli
+            EVX_PI_WIFI: fileURLToPath(new URL('../pi/wifi.py', import.meta.url)), NMCLI: fileURLToPath(new URL('./fake-nmcli', import.meta.url)), FAKE_NM: stateDir,
             EVX_PI_PAGE_MATCH: '^http://127\\.0\\.0\\.1:\\d+/scanterminal' },
     });
     agent.stdout.on('data', (d) => { agentOut += d; });
@@ -67,6 +69,7 @@ test('window.WebKiosk on the scanterminal with the Pi\'s state; not on another p
     assert.equal(s.channel, 'stable');
     assert.ok(Number.isInteger(s.uptime_s));
     assert.equal(typeof s.pi, 'object');
+    assert.equal(s.wifi_version, '', 'wifi_version (empty) tells EventVOX this version takes wifi networks');
     assert.equal(await page.evaluate(() => window.WebKiosk.nfcAvailable()), false);
     // Rust sinds de laatste toets (voor 's nachts herladen)
     await page.keyboard.press('a');
@@ -97,6 +100,23 @@ test('a command runs once per id and is reported done; reboot and update (dry ru
     assert.equal((await status(page)).channel, 'beta');
     const saved = JSON.parse(readFileSync(join(stateDir, 'state.json'), 'utf8'));
     assert.deepEqual(saved.settings, { update_channel: 'beta', nightly_hour: 5 });
+    await page.close();
+});
+
+test('wifi networks from EventVOX: set once per version (wifi.py with a fake nmcli), reported in the status', async () => {
+    const page = await terminalPage();
+    const wifi = { version: 'aaaaaaaaaaaaaaaa', networks: [{ ssid: 'EventVOX-Scan', security: 'WPA', password: 'scan-wachtwoord-1', hidden: false, priority: 50 }] };
+    await page.evaluate((w) => window.WebKiosk.setWifiProfiles(JSON.stringify(w)), wifi);
+    await until(async () => (await status(page)).wifi_version === 'aaaaaaaaaaaaaaaa');
+    const s = await status(page);
+    assert.match(s.wifi_result, /1 ingesteld \(EventVOX-Scan\)/);
+    assert.doesNotMatch(JSON.stringify(s), /scan-wachtwoord/, 'the password in the status');
+    assert.doesNotMatch(readFileSync(join(stateDir, 'log.txt'), 'utf8'), /scan-wachtwoord/, 'the password in the log');
+    // The same version again: nothing
+    const before = readFileSync(join(stateDir, 'calls'), 'utf8');
+    await page.evaluate((w) => window.WebKiosk.setWifiProfiles(JSON.stringify(w)), wifi);
+    await wait(800);
+    assert.equal(readFileSync(join(stateDir, 'calls'), 'utf8'), before, 'applied twice');
     await page.close();
 });
 

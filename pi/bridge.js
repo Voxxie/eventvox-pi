@@ -54,6 +54,8 @@
         command: function (json) { send({ type: 'command', value: String(json) }); },
         applySettings: function (json) { send({ type: 'settings', value: String(json) }); },
         setAdminKey: function () { /* een Pi heeft geen beheerscherm */ },
+        /** Wifi-netwerken uit EventVOX (admin-tenant): { version, networks }; de agent zet ze met nmcli */
+        setWifiProfiles: function (json) { send({ type: 'wifi', value: String(json) }); },
     };
     wifiEvent();
     send({ type: 'hello' });

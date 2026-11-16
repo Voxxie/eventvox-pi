@@ -17,8 +17,11 @@ zijn **Nederlands**. Handleiding: `docs/` (werk die bij bij elke zichtbare wijzi
 5. **`window.WebKiosk`** (`pi/bridge.js`) volgt het contract van de kiosk-app (Voxxie/eventvox-kioskapp, AGENTS.md):
    alleen toevoegen. `getStatus()` geeft `app: 'pi'` en `pi { model, temperature_c, undervoltage, undervoltage_seen,
    throttled, disk_free_mb }`. De backend (`Helpers\Terminals::kioskStatus`) laat onbekende velden vallen: een nieuw veld
-   eerst daar, dan in de frontend. Opdrachten: `reload`, `restart` (browser), `reboot`, `update`, `locate`.
-6. Root alleen via `pi/eventvox-pi-root` (`reboot`, `update`). De debugpoort van Chromium alleen op 127.0.0.1.
+   eerst daar, dan in de frontend. Ook `wifi_version` (altijd, ook leeg) en `wifi_result`; `setWifiProfiles(json)` zet de
+   wifi-netwerken uit EventVOX. Opdrachten: `reload`, `restart` (browser), `reboot`, `update`, `locate`.
+6. Root alleen via `pi/eventvox-pi-root` (`reboot`, `update`, `wifi`). `wifi` leest de netwerken uit EventVOX van stdin
+   (`pi/wifi.py`: strenge controle, nmcli zonder shell, alleen eigen `evx-`-verbindingen); nooit wachtwoorden in een
+   bestand of logboek. Bestanden in `/opt/eventvox-pi` zijn van root. De debugpoort van Chromium alleen op 127.0.0.1.
 7. Geen locatie (een Pi heeft geen GPS en dat blijft zo), geen geheimen of gescande codes in het logboek.
 8. Onderspanning (`undervoltage`) wordt gemeld maar bewust niet getoond in EventVOX (bekend, voorlopig niets mee doen).
 
@@ -30,7 +33,8 @@ zijn **Nederlands**. Handleiding: `docs/` (werk die bij bij elke zichtbare wijzi
 | `pi/bridge.js` / `pi/locate.js` | `window.WebKiosk` in de scanterminal / Zoek mij |
 | `pi/kiosk.sh` | Chromium-lus (labwc autostart) |
 | `pi/update.sh` | Bijwerken: pakket (SHA-256) en apt; herstart alleen als er iets nieuws was |
-| `tests/` | `run.sh`: shellcheck, `update.test.sh`, `agent.test.mjs` |
+| `pi/wifi.py` | Wifi-netwerken uit EventVOX zetten (als root, nmcli) |
+| `tests/` | `run.sh`: shellcheck, `update.test.sh`, `wifi.test.sh`, `agent.test.mjs` |
 
 ## Testen
 Er is geen Pi: test wat kan (`tests/run.sh`, ook in CI) en zeg eerlijk wat alleen op een Pi te testen is (labwc, HDMI,

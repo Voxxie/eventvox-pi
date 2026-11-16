@@ -11,10 +11,12 @@ else
   echo "(shellcheck niet geïnstalleerd: overgeslagen)"
 fi
 echo "== Python"
-python3 -m py_compile "$ROOT/pi/agent.py"
+python3 -m py_compile "$ROOT/pi/agent.py" "$ROOT/pi/wifi.py"
 node --check "$ROOT/pi/bridge.js"
 node --check "$ROOT/pi/locate.js"
 echo "== Bijwerken (update.sh)"
 bash "$ROOT/tests/update.test.sh"
+echo "== Wifi (wifi.py)"
+bash "$ROOT/tests/wifi.test.sh"
 echo "== Agent tegen Chromium"
 node --test "$ROOT/tests/agent.test.mjs"
