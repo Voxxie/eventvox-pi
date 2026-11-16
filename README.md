@@ -8,17 +8,14 @@ Hij werkt zichzelf 's nachts bij, en met **Raspberry Pi Connect** kijk je op afs
 
 ## Snel aan de slag
 
-1. Flash een SD-kaart met **Raspberry Pi Imager**: *Raspberry Pi OS Lite*. Stel een gebruiker, wifi (of gebruik een
-   kabel) en SSH in.
-2. Start de Pi, log in (SSH of toetsenbord) en installeer:
-   ```bash
-   curl -fsSLO https://github.com/Voxxie/eventvox-pi/releases/latest/download/install.sh
-   sudo bash install.sh
-   sudo reboot
-   ```
-3. Het scherm toont een code van 6 tekens: koppel de terminal in EventVOX via **Toegang → Terminals → Terminal koppelen**.
+1. Open in **Raspberry Pi Imager 2** de beschrijving van EventVOX-Pi: download
+   [`eventvox-pi.rpi-imager-manifest`](https://github.com/Voxxie/eventvox-pi/releases/latest/download/eventvox-pi.rpi-imager-manifest)
+   en dubbelklik erop.
+2. Kies **EventVOX-Pi**, stel een gebruiker, wifi en eventueel Raspberry Pi Connect in, en schrijf de SD-kaart.
+3. Zet de Pi aan. Na een paar minuten (en één herstart) staat er een code van 6 tekens op het scherm: koppel de terminal
+   in EventVOX via **Toegang → Terminals → Terminal koppelen**.
 
-Uitgebreid, met Raspberry Pi Connect: **[docs/inrichten.md](docs/inrichten.md)**.
+Uitgebreid, en de manier met het installatiescript voor een Pi die al draait: **[docs/inrichten.md](docs/inrichten.md)**.
 
 ## Handleiding
 
@@ -35,10 +32,11 @@ Uitgebreid, met Raspberry Pi Connect: **[docs/inrichten.md](docs/inrichten.md)**
 | Pad | Wat |
 |---|---|
 | `install.sh` | Het installatiescript (ook bij elke release te downloaden) |
+| `image/` | Het kant-en-klare SD-kaart-image: bouwen (`build.sh`), eerste start (`firstboot.sh`), beschrijving voor Imager (`manifest.py`) |
 | `pi/` | Wat op de Pi in `/opt/eventvox-pi` komt: de agent, de browser-start, bijwerken |
 | `docs/` | De handleiding |
 | `tests/` | Controles zonder Pi (`tests/run.sh`, ook in GitHub Actions) |
-| `.github/workflows/` | Controle bij elke push; een release maakt het pakket en `update.json` |
+| `.github/workflows/` | Controle bij elke push; een release maakt het pakket, `update.json` en het image |
 
 Deze repository is **openbaar**: de Pi's downloaden hun updates hier zonder inloggen. Zet er nooit wachtwoorden,
 wifi-sleutels of auth keys in.

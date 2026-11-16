@@ -30,6 +30,8 @@ Zet één of twee Pi's op het testkanaal om een nieuwe versie eerst te proberen.
    - `eventvox-pi-<versie>.tar.gz` (het pakket: `install.sh` en `pi/`)
    - `install.sh` (voor het installatiecommando)
    - `update.json` (wat de Pi's lezen)
+   - na ongeveer een half uur ook het image (`eventvox-pi-<versie>.img.xz`) en de beschrijving voor Raspberry Pi
+     Imager (`eventvox-pi.json`, `eventvox-pi.rpi-imager-manifest`), via *Image EventVOX-Pi*
 
    en werkt de pre-release **beta** bij (het testkanaal; geen versie, niet installeren).
 

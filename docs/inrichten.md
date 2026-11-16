@@ -7,7 +7,45 @@
 - Een scherm via HDMI (het geluid van de scanterminal gaat via HDMI) en een USB-scanner
 - Netwerk: een kabel of wifi
 
-## 1. SD-kaart flashen
+## Twee manieren
+
+- **Het EventVOX-Pi-image (aanbevolen):** flashen met Raspberry Pi Imager, de Pi aanzetten, klaar. Geen SSH nodig.
+- **Het installatiescript:** eerst gewoon Raspberry Pi OS, dan via SSH één commando (zie onderaan). Handig voor een Pi
+  die al draait.
+
+## Met het EventVOX-Pi-image
+
+### Eenmalig: EventVOX-Pi in Raspberry Pi Imager zetten
+
+Je hebt **Raspberry Pi Imager 2** nodig (raspberrypi.com/software). Kies één van:
+
+- download `eventvox-pi.rpi-imager-manifest` bij de
+  [nieuwste release](https://github.com/Voxxie/eventvox-pi/releases/latest) en dubbelklik erop; of
+- in Imager: **App Options → Content Repository → EDIT → Use custom URL** met
+  `https://github.com/Voxxie/eventvox-pi/releases/latest/download/eventvox-pi.json`, dan **APPLY & RESTART**.
+
+Download het `.img.xz`-bestand niet los om te openen met *Use custom*: dan weet Imager niet hoe hij je instellingen
+(gebruiker, wifi) moet toepassen en slaat hij ze over.
+
+### Flashen
+
+1. Kies je Pi en dan **EventVOX-Pi** als besturingssysteem, en je SD-kaart.
+2. Bij de instellingen:
+   - een **gebruikersnaam en wachtwoord** (de kiosk draait als deze gebruiker);
+   - het **wifi-netwerk** en land **NL** (niet nodig met een kabel; netwerken uit EventVOX komen er later vanzelf bij);
+   - **SSH aan** (handig voor onderhoud);
+   - **Raspberry Pi Connect**: plak een auth key (zie hieronder).
+3. Schrijf de kaart, zet hem in de Pi en zet de Pi aan.
+
+De Pi start, richt de kiosk in (een paar minuten) en herstart één keer. Daarna staat er een **code van 6 tekens** op het
+scherm: ga verder bij [Koppelen in EventVOX](#4-koppelen-in-eventvox).
+
+Bijwerken gaat daarna vanzelf (zie [bijwerken](bijwerken-en-releases.md)); je hoeft een Pi niet opnieuw te flashen
+voor een nieuwe versie.
+
+## Met het installatiescript
+
+### 1. SD-kaart flashen
 
 Open **Raspberry Pi Imager** op je computer:
 
@@ -19,7 +57,7 @@ Open **Raspberry Pi Imager** op je computer:
    - optioneel **Raspberry Pi Connect** (Imager 2.0.10 of nieuwer): plak een auth key, zie hieronder.
 3. Schrijf de kaart.
 
-## 2. Raspberry Pi Connect (optioneel, aanbevolen)
+### 2. Raspberry Pi Connect (optioneel, aanbevolen)
 
 Met [Raspberry Pi Connect](https://connect.raspberrypi.com) kijk je op afstand mee op het scherm van de Pi en open je
 een terminal, zonder dat je in hetzelfde netwerk zit. Koppelen gaat met een **auth key**, zodat je per Pi niet hoeft in te
@@ -37,7 +75,7 @@ en voor elke Pi een nieuwe. Met *Connect for Organisations* kun je meerdere keys
 
 Zonder key kun je later koppelen met `rpi-connect signin` (als de kiosk-gebruiker).
 
-## 3. Installeren
+### 3. Installeren
 
 Start de Pi en log in via SSH (`ssh <gebruiker>@<hostname>.local`) of met een toetsenbord op de Pi:
 
@@ -60,7 +98,7 @@ Zet ze vóór `bash`, bijvoorbeeld `sudo URL=https://… bash install.sh`:
 | `WIFI_SSID=… WIFI_PASSWORD=…` | Een (extra) wifi-netwerk, als je dat niet in Imager deed |
 | `KIOSK_USER=…` | De gebruiker van de kiosk; standaard die uit Imager |
 
-## 4. Koppelen in EventVOX
+### 4. Koppelen in EventVOX
 
 Na de herstart toont het scherm een **code van 6 tekens**. Ga in EventVOX naar **Toegang → Terminals → Terminal
 koppelen**, typ de code over, geef de terminal een naam en kies waar hij scant. Klaar: vanaf nu zie je hem in EventVOX

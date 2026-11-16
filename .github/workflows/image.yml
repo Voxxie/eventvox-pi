@@ -1,0 +1,82 @@
+name: Image EventVOX-Pi
+
+# Bij elke gepubliceerde release (tag v1.0.0): een kant-en-klaar SD-kaart-image (eventvox-pi-<versie>.img.xz) en de
+# beschrijving voor Raspberry Pi Imager (eventvox-pi.json en eventvox-pi.rpi-imager-manifest) aan de release hangen.
+# Basis: het officiële Raspberry Pi OS Lite (64-bit) uit de lijst van Imager; zie image/build.sh en docs/inrichten.md.
+# Handmatig starten (Actions > Image EventVOX-Pi > Run workflow) bouwt een proef-image als artifact (3 dagen bewaard).
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  image:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 90
+    if: github.event_name != 'release' || github.event.release.tag_name != 'beta'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Versie bepalen
+        id: version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if [ -n "$TAG" ]; then
+            NAME="${TAG#v}"
+            [[ "$NAME" =~ ^([0-9]+)\.([0-9]{1,2})(\.([0-9]{1,2}))?$ ]] || { echo "::error::Tag '$TAG' heeft niet het formaat v1.0.0"; exit 1; }
+            CODE=$(( BASH_REMATCH[1] * 10000 + BASH_REMATCH[2] * 100 + ${BASH_REMATCH[4]:-0} ))
+          else
+            NAME="0.0.0-test.${GITHUB_RUN_NUMBER}"; CODE=0
+          fi
+          echo "$NAME" > pi/VERSION
+          echo "$CODE" > pi/VERSION_CODE
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Gereedschap
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq parted e2fsprogs xz-utils zerofree jq curl
+
+      - name: Basis-image opzoeken (officiële lijst van Raspberry Pi Imager)
+        id: base
+        run: |
+          curl -fsSL -o oslist.json https://downloads.raspberrypi.com/os_list_imagingutility_v4.json
+          jq '[.. | objects | select(.name? == "Raspberry Pi OS Lite (64-bit)" and has("url"))][0]' oslist.json > base.json
+          jq -e .url base.json >/dev/null || { echo "::error::Raspberry Pi OS Lite (64-bit) niet gevonden in de lijst"; exit 1; }
+          echo "url=$(jq -r .url base.json)" >> "$GITHUB_OUTPUT"
+          jq '{name, release_date, init_format, devices, capabilities}' base.json
+
+      - name: Image bouwen
+        run: sudo image/build.sh "${{ steps.base.outputs.url }}" "${{ steps.version.outputs.name }}" dist
+
+      - name: Beschrijving voor Imager
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          V="${{ steps.version.outputs.name }}"
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG:-proef}/eventvox-pi-$V.img.xz"
+          sudo chown -R "$USER" dist
+          python3 image/manifest.py base.json "$V" "dist/eventvox-pi-$V.img.xz" "dist/eventvox-pi-$V.img.extract" "$URL" > dist/eventvox-pi.json
+          cp dist/eventvox-pi.json dist/eventvox-pi.rpi-imager-manifest
+          rm "dist/eventvox-pi-$V.img.extract"
+          cat dist/eventvox-pi.json
+
+      - name: Aan release hangen
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG" dist/* --clobber
+
+      - name: Proef-image bewaren
+        if: github.event_name != 'release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: eventvox-pi-${{ steps.version.outputs.name }}
+          path: dist/*
+          retention-days: 3

@@ -1,0 +1,12 @@
+[Unit]
+Description=EventVOX-Pi: kiosk inrichten bij de eerste start van het image
+# Na de instellingen uit Raspberry Pi Imager (cloud-init of rpi-preseed, wat het basis-image gebruikt)
+After=cloud-final.service rpi-preseed.service userconfig.service multi-user.target
+ConditionPathExists=/opt/eventvox-pi-kit/install.sh
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/eventvox-pi-firstboot
+
+[Install]
+WantedBy=multi-user.target
