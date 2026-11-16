@@ -56,6 +56,8 @@
         setAdminKey: function () { /* een Pi heeft geen beheerscherm */ },
         /** Wifi-netwerken uit EventVOX (admin-tenant): { version, networks }; de agent zet ze met nmcli */
         setWifiProfiles: function (json) { send({ type: 'wifi', value: String(json) }); },
+        /** SSH-sleutels van de beheerders uit EventVOX: { version, keys }; de agent zet ze in authorized_keys */
+        setSshKeys: function (json) { send({ type: 'ssh', value: String(json) }); },
     };
     wifiEvent();
     send({ type: 'hello' });

@@ -353,6 +353,10 @@ class Agent:
         s['wifi_version'] = wifi_done.get('version', '') if isinstance(wifi_done.get('version'), str) else ''
         if wifi_done.get('result'):
             s['wifi_result'] = str(wifi_done['result'])[:200]
+        ssh_done = read_json('ssh-result.json', {})
+        s['ssh_version'] = ssh_done.get('version', '') if isinstance(ssh_done.get('version'), str) else ''
+        if ssh_done.get('result'):
+            s['ssh_result'] = str(ssh_done['result'])[:200]
         if update.get('checked_at'):
             s['update'] = {'checked_at': update['checked_at'], 'result': str(update.get('result', ''))[:160]}
         return s
@@ -393,6 +397,8 @@ class Agent:
                 self.settings(msg.get('value', ''))
             elif kind == 'wifi':
                 self.wifi(msg.get('value', ''))
+            elif kind == 'ssh':
+                self.ssh(msg.get('value', ''))
             elif kind == 'diagnostics':
                 self.log.add('Diagnose gevraagd door EventVOX')
                 self.diag = self.log.text() + '\n' + self.diag_extra()
@@ -486,6 +492,26 @@ class Agent:
             self.wifi_busy = False
         self.push(True)
 
+    def ssh(self, raw):
+        """SSH-sleutels van de beheerders uit EventVOX: alleen een andere versie; via sudo naar ssh.py (stdin)"""
+        try:
+            o = json.loads(raw)
+            version = o['version']
+            if not isinstance(version, str) or not re.fullmatch(r'[0-9a-f]{16}', version) or not isinstance(o.get('keys', []), list):
+                return
+        except (ValueError, KeyError, TypeError):
+            return
+        with self.lock:
+            if version == read_json('ssh-result.json', {}).get('version') or getattr(self, 'ssh_busy', False):
+                return
+            self.ssh_busy = True
+        try:
+            self.root('ssh', json.dumps({'version': version, 'keys': o.get('keys') or []}))
+            self.log.add('SSH-sleutels uit EventVOX: ' + str(read_json('ssh-result.json', {}).get('result', 'geen uitkomst'))[:200])
+        finally:
+            self.ssh_busy = False
+        self.push(True)
+
     # --- acties ---
 
     def reload(self):
@@ -512,15 +538,16 @@ class Agent:
             self.log.add('Browser herstarten mislukt: ' + str(e))
 
     def root(self, action, stdin=None):
-        """Pi herstarten, bijwerken of wifi zetten (als root, via sudo; alleen deze drie). stdin: invoer (wifi)"""
-        if action != 'wifi':
+        """Pi herstarten, bijwerken, wifi of SSH-sleutels zetten (als root, via sudo; alleen deze vier). stdin: invoer"""
+        if action not in ('wifi', 'ssh'):
             self.log.add(('Pi herstarten' if action == 'reboot' else 'Bijwerken gestart') + (' (proef, niet echt)' if DRYRUN else ''))
         if DRYRUN:
             with open(path('dryrun-actions'), 'a') as f:
                 f.write(action + '\n')
-            if action == 'wifi' and os.environ.get('EVX_PI_WIFI'):
-                # Tests: wifi.py zonder sudo, met een nagebootste nmcli (EVX_PI_WIFI = pad naar wifi.py)
-                subprocess.run([sys.executable, os.environ['EVX_PI_WIFI']], input=stdin, capture_output=True, text=True,
+            script = {'wifi': os.environ.get('EVX_PI_WIFI'), 'ssh': os.environ.get('EVX_PI_SSH')}.get(action)
+            if script:
+                # Tests: wifi.py / ssh.py zonder sudo (EVX_PI_WIFI / EVX_PI_SSH = pad naar het script)
+                subprocess.run([sys.executable, script], input=stdin, capture_output=True, text=True,
                                env={**os.environ, 'EVX_PI_STATE': STATE_DIR})
             return
         r = subprocess.run(['sudo', '-n', ROOT_HELPER, action], input=stdin, capture_output=True, text=True, timeout=180)

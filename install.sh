@@ -82,7 +82,7 @@ fi
 
 step "EventVOX-Pi $(cat pi/VERSION) installeren in $OPT"
 mkdir -p "$OPT" "$CONF_DIR" "$STATE"
-install -m 0755 pi/agent.py pi/kiosk.sh pi/update.sh pi/wifi.py "$OPT/"
+install -m 0755 pi/agent.py pi/kiosk.sh pi/update.sh pi/wifi.py pi/ssh.py "$OPT/"
 install -m 0644 pi/bridge.js pi/locate.js pi/VERSION pi/VERSION_CODE "$OPT/"
 install -m 0755 -o root -g root pi/eventvox-pi-root /usr/local/sbin/eventvox-pi-root
 chown "$KIOSK_USER:$KIOSK_USER" "$STATE"
@@ -95,9 +95,9 @@ URL=$URL
 EOF
 fi
 
-# Herstarten, bijwerken en wifi zetten mag de agent als root, alleen deze drie
+# Herstarten, bijwerken, wifi en SSH-sleutels zetten mag de agent als root, alleen deze vier
 cat > /etc/sudoers.d/eventvox-pi <<EOF
-$KIOSK_USER ALL=(root) NOPASSWD: /usr/local/sbin/eventvox-pi-root reboot, /usr/local/sbin/eventvox-pi-root update, /usr/local/sbin/eventvox-pi-root wifi
+$KIOSK_USER ALL=(root) NOPASSWD: /usr/local/sbin/eventvox-pi-root reboot, /usr/local/sbin/eventvox-pi-root update, /usr/local/sbin/eventvox-pi-root wifi, /usr/local/sbin/eventvox-pi-root ssh
 EOF
 chmod 0440 /etc/sudoers.d/eventvox-pi
 visudo -cf /etc/sudoers.d/eventvox-pi >/dev/null

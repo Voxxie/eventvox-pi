@@ -18,8 +18,9 @@ zijn **Nederlands**. Handleiding: `docs/` (werk die bij bij elke zichtbare wijzi
    alleen toevoegen. `getStatus()` geeft `app: 'pi'` en `pi { model, temperature_c, undervoltage, undervoltage_seen,
    throttled, disk_free_mb }`. De backend (`Helpers\Terminals::kioskStatus`) laat onbekende velden vallen: een nieuw veld
    eerst daar, dan in de frontend. Ook `wifi_version` (altijd, ook leeg) en `wifi_result`; `setWifiProfiles(json)` zet de
-   wifi-netwerken uit EventVOX. Opdrachten: `reload`, `restart` (browser), `reboot`, `update`, `locate`.
-6. Root alleen via `pi/eventvox-pi-root` (`reboot`, `update`, `wifi`). `wifi` leest de netwerken uit EventVOX van stdin
+   wifi-netwerken uit EventVOX; `ssh_version`/`ssh_result` en `setSshKeys(json)` de SSH-sleutels van de beheerders. Opdrachten: `reload`, `restart` (browser), `reboot`, `update`, `locate`.
+6. Root alleen via `pi/eventvox-pi-root` (`reboot`, `update`, `wifi`, `ssh`). `ssh` (`pi/ssh.py`): alleen publieke sleutels
+   zonder opties, in een eigen blok van authorized_keys; sleutels daarbuiten nooit aanraken. `wifi` leest de netwerken uit EventVOX van stdin
    (`pi/wifi.py`: strenge controle, nmcli zonder shell, alleen eigen `evx-`-verbindingen); nooit wachtwoorden in een
    bestand of logboek. Bestanden in `/opt/eventvox-pi` zijn van root. De debugpoort van Chromium alleen op 127.0.0.1.
 7. Geen locatie (een Pi heeft geen GPS en dat blijft zo), geen geheimen of gescande codes in het logboek.
@@ -34,8 +35,9 @@ zijn **Nederlands**. Handleiding: `docs/` (werk die bij bij elke zichtbare wijzi
 | `pi/kiosk.sh` | Chromium-lus (labwc autostart) |
 | `pi/update.sh` | Bijwerken: pakket (SHA-256) en apt; herstart alleen als er iets nieuws was |
 | `pi/wifi.py` | Wifi-netwerken uit EventVOX zetten (als root, nmcli) |
+| `pi/ssh.py` | SSH-sleutels uit EventVOX in authorized_keys (als root) |
 | `image/` | Het SD-kaart-image (`build.sh`: officieel Raspberry Pi OS Lite 64-bit + pakketten + `/opt/eventvox-pi-kit`; `firstboot.sh`: wacht op gebruiker uit Imager, `install.sh --firstboot`, herstart; `manifest.py`: beschrijving voor Imager met `init_format` van het basis-image). Workflow `image.yml` (arm64-runner). |
-| `tests/` | `run.sh`: shellcheck, `update.test.sh`, `wifi.test.sh`, `agent.test.mjs` |
+| `tests/` | `run.sh`: shellcheck, `update.test.sh`, `wifi.test.sh`, `ssh.test.sh`, `agent.test.mjs` |
 
 ## Testen
 Er is geen Pi: test wat kan (`tests/run.sh`, ook in CI) en zeg eerlijk wat alleen op een Pi te testen is (labwc, HDMI,

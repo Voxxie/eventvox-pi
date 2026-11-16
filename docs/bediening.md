@@ -38,6 +38,20 @@ wifi-netwerken voor alle organisaties of voor gekozen organisaties. Een Pi zet z
 of met de hand instelde, blijven altijd staan. De kaart van de terminal toont bij *Wifi uit EventVOX* welke netwerken
 erop staan. Wachtwoorden komen nooit in het logboek.
 
+## Inloggen met SSH
+
+In de admin-tenant van EventVOX (**Platform → Alle terminals → SSH-sleutels voor de Raspberry Pi's**) zet je de
+**publieke** SSH-sleutels van de beheerders. Elke Pi laat die binnen een minuut binnen, zonder wachtwoord:
+
+```bash
+ssh <gebruiker>@<naam van de Pi>.local      # de gebruiker uit Raspberry Pi Imager
+```
+
+Een verwijderde sleutel verdwijnt van alle Pi's. Een sleutel die je in Raspberry Pi Imager opgaf, blijft altijd staan.
+Nog geen sleutel? Maak er een op je eigen computer met `ssh-keygen -t ed25519` en plak de inhoud van
+`~/.ssh/id_ed25519.pub` in EventVOX (nooit het bestand zonder `.pub`: dat is je privésleutel). Zonder netwerk in de buurt
+kan het ook via Raspberry Pi Connect (*Remote shell*), zonder sleutel of wachtwoord.
+
 ## Diagnose
 
 **Diagnose opvragen** haalt het logboek van de Pi op (opstarten, opdrachten, bijwerken, browsercrashes, temperatuur,

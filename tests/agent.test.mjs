@@ -5,7 +5,7 @@
 //   FRONTEND=/pad/naar/eventvox-frontend node --test …  ook tegen de echte scanterminal van EventVOX
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtempSync, readFileSync, existsSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
@@ -38,10 +38,11 @@ before(async () => {
     base = `http://127.0.0.1:${server.address().port}`;
     browser = await chromium.launch({ args: [`--remote-debugging-port=${PORT}`, '--autoplay-policy=no-user-gesture-required'] });
     stateDir = mkdtempSync(join(tmpdir(), 'evx-pi-'));
+    mkdirSync(join(stateDir, 'home'));
     agent = spawn('python3', [AGENT], {
         env: { ...process.env, EVX_PI_CDP: `http://127.0.0.1:${PORT}`, EVX_PI_STATE: stateDir, EVX_PI_DRYRUN: '1', EVX_PI_TICK: '0.3',
             // Wifi: wifi.py zonder sudo, met een nagebootste nmcli
-            EVX_PI_WIFI: fileURLToPath(new URL('../pi/wifi.py', import.meta.url)), NMCLI: fileURLToPath(new URL('./fake-nmcli', import.meta.url)), FAKE_NM: stateDir,
+            EVX_PI_WIFI: fileURLToPath(new URL('../pi/wifi.py', import.meta.url)), EVX_PI_SSH: fileURLToPath(new URL('../pi/ssh.py', import.meta.url)), EVX_PI_SSH_HOME: join(stateDir, 'home'), NMCLI: fileURLToPath(new URL('./fake-nmcli', import.meta.url)), FAKE_NM: stateDir,
             EVX_PI_PAGE_MATCH: '^http://127\\.0\\.0\\.1:\\d+/scanterminal' },
     });
     agent.stdout.on('data', (d) => { agentOut += d; });
@@ -117,6 +118,17 @@ test('wifi networks from EventVOX: set once per version (wifi.py with a fake nmc
     await page.evaluate((w) => window.WebKiosk.setWifiProfiles(JSON.stringify(w)), wifi);
     await wait(800);
     assert.equal(readFileSync(join(stateDir, 'calls'), 'utf8'), before, 'applied twice');
+    await page.close();
+});
+
+test('SSH keys from EventVOX: in authorized_keys once per version, reported in the status', async () => {
+    const page = await terminalPage();
+    assert.equal((await status(page)).ssh_version, '', 'ssh_version (empty) tells EventVOX this Pi takes SSH keys');
+    const ssh = { version: 'bbbbbbbbbbbbbbbb', keys: ['ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGFoHZFVa9sx/pABql+KY2/5u+XxycAQKk+P814wP5jo eventvox:Hans'] };
+    await page.evaluate((k) => window.WebKiosk.setSshKeys(JSON.stringify(k)), ssh);
+    await until(async () => (await status(page)).ssh_version === 'bbbbbbbbbbbbbbbb');
+    assert.match((await status(page)).ssh_result, /1 sleutel \(Hans\)/);
+    assert.match(readFileSync(join(stateDir, 'home', '.ssh', 'authorized_keys'), 'utf8'), /eventvox:Hans/);
     await page.close();
 });
 
