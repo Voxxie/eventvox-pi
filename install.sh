@@ -161,11 +161,17 @@ EOF
 touch "$KIOSK_HOME/.hushlogin"
 chown -R "$KIOSK_USER:$KIOSK_USER" "$KIOSK_HOME/.config/labwc" "$KIOSK_HOME/.hushlogin"
 
-if [ -f pi/splash.tga ] && apt-cache show rpi-splash-screen-support >/dev/null 2>&1; then
-  if ! cmp -s pi/splash.tga /lib/firmware/logo.tga; then
-    step "Opstartscherm met het EventVOX-logo (in plaats van de Linux-tekst)"
-    dpkg -s rpi-splash-screen-support >/dev/null 2>&1 || DEBIAN_FRONTEND=noninteractive apt-get install -y -q rpi-splash-screen-support initramfs-tools
-    configure-splash pi/splash.tga || echo "    Opstartscherm instellen lukte niet; de Pi start gewoon, met tekst." >&2
+if [ -f pi/splash.tga ]; then
+  # De pakketlijst kan oud zijn (bij bijwerken komt apt-get update pas later): dan eerst verversen
+  apt-cache show rpi-splash-screen-support >/dev/null 2>&1 || apt-get update -q >/dev/null 2>&1 || true
+  if apt-cache show rpi-splash-screen-support >/dev/null 2>&1; then
+    if ! cmp -s pi/splash.tga /lib/firmware/logo.tga; then
+      step "Opstartscherm met het EventVOX-logo (in plaats van de Linux-tekst)"
+      dpkg -s rpi-splash-screen-support >/dev/null 2>&1 || DEBIAN_FRONTEND=noninteractive apt-get install -y -q rpi-splash-screen-support initramfs-tools
+      configure-splash pi/splash.tga || echo "    Opstartscherm instellen lukte niet; de Pi start gewoon, zonder logo." >&2
+    fi
+    # logo.nologo (van een oudere versie van dit script) verbergt ook het opstartlogo
+    for c in /boot/firmware/cmdline.txt /boot/cmdline.txt; do [ -f "$c" ] && sed -i 's/ logo\.nologo//g' "$c"; done
   fi
 fi
 
@@ -222,7 +228,7 @@ done
 for key in hdmi_drive=2 hdmi_group=1; do
   if grep -q "^${key%%=*}=" "$CONFIG_TXT"; then sed -i "s/^${key%%=*}=.*/$key/" "$CONFIG_TXT"; else echo "$key" >> "$CONFIG_TXT"; fi
 done
-grep -q " quiet" "$CMDLINE_TXT" || sed -i 's/$/ quiet loglevel=1 logo.nologo/' "$CMDLINE_TXT"
+grep -q " quiet" "$CMDLINE_TXT" || sed -i 's/$/ quiet loglevel=1/' "$CMDLINE_TXT"
 grep -q "consoleblank=" "$CMDLINE_TXT" || sed -i 's/$/ consoleblank=0/' "$CMDLINE_TXT"
 amixer cset numid=3 2 >/dev/null 2>&1 < /dev/null || true
 alsactl store >/dev/null 2>&1 || true
