@@ -14,6 +14,28 @@ mkdir -p "$PROFILE"
 # labwc verbergt de cursor niet vanzelf: na 15 s stilte naar de hoek (Raspberry Pi Connect laat hem anders midden staan)
 command -v swayidle >/dev/null && command -v wlrctl >/dev/null && swayidle -w timeout 15 'wlrctl pointer move 10000 10000' &
 
+# Geluid via HDMI. Met de KMS-videodriver van Raspberry Pi OS is HDMI-geluid een eigen geluidskaart (vc4hdmi, op een Pi 4/5
+# vc4hdmi0 en vc4hdmi1) en is de standaardkaart de koptelefoonaansluiting; Chromium gebruikt de standaard (ALSA). Daarom
+# bij elke start de standaard op de HDMI-kaart zetten: de eerste met een aangesloten scherm, anders de eerste HDMI-kaart.
+# HDMI_AUDIO=0 in /etc/eventvox-pi/config laat het geluid zoals het is (bijvoorbeeld een USB-luidspreker).
+if [ "${HDMI_AUDIO:-1}" != "0" ]; then
+  CARD=""
+  for status in /sys/class/drm/card*-HDMI-A-*/status; do
+    [ "$(cat "$status" 2>/dev/null)" = "connected" ] || continue
+    PORT="${status%/status}"; PORT="${PORT##*-HDMI-A-}"   # 1 of 2
+    for id in "vc4hdmi$((PORT - 1))" vc4hdmi; do grep -q "\[$id *\]" /proc/asound/cards 2>/dev/null && { CARD="$id"; break; }; done
+    [ -n "$CARD" ] && break
+  done
+  [ -z "$CARD" ] && CARD="$(grep -o '\[vc4hdmi[0-9]* *\]' /proc/asound/cards 2>/dev/null | head -1 | tr -d '[] ')"
+  if [ -n "$CARD" ]; then
+    cat > "$HOME/.asoundrc" <<EOF
+# Door EventVOX-Pi (kiosk.sh) bij elke start gezet: geluid via HDMI ($CARD)
+pcm.!default { type plug slave.pcm "hdmi:CARD=$CARD,DEV=0" }
+ctl.!default { type hw card $CARD }
+EOF
+  fi
+fi
+
 # Wacht op netwerk (hoogstens 30 s): anders eerst een foutpagina na een snelle start
 for _ in $(seq 1 30); do
   getent hosts eventvox.nl >/dev/null 2>&1 && break

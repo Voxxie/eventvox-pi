@@ -29,7 +29,7 @@
 |---|---|
 | `/opt/eventvox-pi/` | `agent.py`, `bridge.js`, `locate.js` (Zoek mij), `kiosk.sh`, `update.sh`, `wifi.py`, `ssh.py`, `VERSION` (alles van root, niet te wijzigen door de kiosk-gebruiker) |
 | `/usr/local/sbin/eventvox-pi-root` | Herstarten, bijwerken, wifi en SSH-sleutels als root |
-| `/etc/eventvox-pi/config` | Het adres (`URL`) en de kiosk-gebruiker (`KIOSK_USER`) |
+| `/etc/eventvox-pi/config` | Het adres (`URL`), de kiosk-gebruiker (`KIOSK_USER`) en eventueel `HDMI_AUDIO=0` (geluid niet naar HDMI) |
 | `/var/lib/eventvox-pi/` | De staat: uitgevoerde opdrachten, instellingen uit EventVOX, `log.txt`, de uitkomst van het bijwerken en van wifi (zonder wachtwoorden) |
 | `~/.config/eventvox-kiosk/` | Het Chromium-profiel (hier bewaart de scanterminal zijn koppeling met EventVOX) |
 | `/etc/sudoers.d/eventvox-pi` | Wat de agent als root mag |
@@ -37,7 +37,8 @@
 ## Wat het installatiescript nog meer doet
 
 - Geen vertaalbalk, inlog- of wachtwoordvragen in Chromium (policy)
-- Geen opstartlogo of meldingen op het scherm, het scherm gaat nooit uit, geluid via HDMI
+- Geen opstartlogo of meldingen op het scherm, het scherm gaat nooit uit, geluid via HDMI (`kiosk.sh` kiest bij elke start
+  de HDMI-geluidskaart van het aangesloten scherm)
 - Eigen naam en SSH-sleutels per Pi (`eventvox-<serienummer>`), ook als je een SD-kaart kloont
 - Automatische beveiligingsupdates
 - Raspberry Pi Connect

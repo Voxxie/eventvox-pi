@@ -11,6 +11,6 @@ Log in via SSH of Raspberry Pi Connect (*Remote shell*).
 | **Bijwerken lukt niet** | `cat /var/lib/eventvox-pi/update-result.json`, en met de hand: `sudo systemctl start eventvox-pi-update`. |
 | **Connect koppelt niet** | De auth key is verlopen of al gebruikt. Koppel met de hand: `rpi-connect signin` (als de kiosk-gebruiker). |
 | **SSH vraagt om een wachtwoord** | Staat je publieke sleutel in EventVOX (Alle terminals → SSH-sleutels) en toont de kaart van de terminal *SSH-sleutels* met jouw naam? Log in als de gebruiker uit Imager. Anders: het wachtwoord uit Imager, of Raspberry Pi Connect. |
-| **Geen geluid** | Het geluid gaat via HDMI: staat het scherm niet op stil? |
+| **Geen geluid** | Het geluid gaat via HDMI naar het scherm: heeft het scherm luidsprekers en staat het niet op stil? Bij elke start kiest de Pi de HDMI-geluidskaart van het aangesloten scherm (`cat ~/.asoundrc`). Testen: `speaker-test -c2 -t sine -l1`. Een USB-luidspreker gebruiken: zet `HDMI_AUDIO=0` in `/etc/eventvox-pi/config`. |
 
 Het logboek kun je ook vanuit EventVOX opvragen: **Diagnose opvragen** op de pagina van de terminal.
