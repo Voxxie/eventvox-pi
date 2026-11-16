@@ -9,7 +9,8 @@ De kaart **EventVOX-Pi (Raspberry Pi)** op de pagina van de terminal:
 
 - **Raspberry Pi**: het model, de temperatuur en de vrije ruimte op de SD-kaart
 - **Versie** van EventVOX-Pi (met *testkanaal* als hij op het testkanaal staat)
-- **Wifi**: netwerk en sterkte (niet bij een kabel)
+- **Netwerk**: of de **kabel** is aangesloten (met snelheid), het **wifi**-netwerk en de sterkte, en via welke van de
+  twee de Pi nu **internet** heeft. In de lijst staat daarvoor een label *Kabel* of *Wifi*
 - **Stabiliteit**: hoe vaak de browser vastliep en opnieuw startte, en hoe lang de Pi aan staat
 - **Laatste update-controle** en de uitkomst
 - **Klok**: of de klok van de Pi gelijk loopt met EventVOX

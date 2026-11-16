@@ -16,7 +16,7 @@ zijn **Nederlands**. Handleiding: `docs/` (werk die bij bij elke zichtbare wijzi
    geldig, ontbrekende krijgen een standaard).
 5. **`window.WebKiosk`** (`pi/bridge.js`) volgt het contract van de kiosk-app (Voxxie/eventvox-kioskapp, AGENTS.md):
    alleen toevoegen. `getStatus()` geeft `app: 'pi'` en `pi { model, temperature_c, undervoltage, undervoltage_seen,
-   throttled, disk_free_mb }`. De backend (`Helpers\Terminals::kioskStatus`) laat onbekende velden vallen: een nieuw veld
+   throttled, disk_free_mb }`, `ethernet { connected, speed_mbps }` en `uplink` (`ethernet`|`wifi`). De backend (`Helpers\Terminals::kioskStatus`) laat onbekende velden vallen: een nieuw veld
    eerst daar, dan in de frontend. Ook `wifi_version` (altijd, ook leeg) en `wifi_result`; `setWifiProfiles(json)` zet de
    wifi-netwerken uit EventVOX; `ssh_version`/`ssh_result` en `setSshKeys(json)` de SSH-sleutels van de beheerders. Opdrachten: `reload`, `restart` (browser), `reboot`, `update`, `locate`.
 6. Root alleen via `pi/eventvox-pi-root` (`reboot`, `update`, `wifi`, `ssh`). `ssh` (`pi/ssh.py`): alleen publieke sleutels

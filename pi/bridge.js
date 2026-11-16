@@ -48,8 +48,11 @@
             }
             return JSON.stringify(s);
         },
-        /** Alleen via wifi; met een kabel null (de terminal toont dan geen wifi-balkjes) */
-        getWifi: function () { return JSON.stringify(state.status && state.status.wifi ? state.status.wifi : null); },
+        /** Alleen als de Pi via wifi internet heeft; via de kabel null (de terminal toont dan geen wifi-balkjes) */
+        getWifi: function () {
+            var st = state.status || {};
+            return JSON.stringify(st.wifi && st.uplink !== 'ethernet' ? st.wifi : null);
+        },
         requestDiagnostics: function () { send({ type: 'diagnostics' }); },
         command: function (json) { send({ type: 'command', value: String(json) }); },
         applySettings: function (json) { send({ type: 'settings', value: String(json) }); },

@@ -254,7 +254,7 @@ def run(cmd, timeout=5):
 
 
 def wifi():
-    """Zoals de kiosk-app: { connected, level 0-4, rssi, ssid?, link_speed, frequency }; None met alleen een kabel"""
+    """Zoals de kiosk-app: { connected, level 0-4, rssi, ssid?, link_speed, frequency }; None zonder wifi op de Pi"""
     link = run(['iw', 'dev', 'wlan0', 'link'])
     if 'Connected to' in link:
         rssi = re.search(r'signal:\s*(-?\d+)', link)
@@ -266,9 +266,30 @@ def wifi():
             if m:
                 out[key] = cast(m.group(1).strip())
         return out
-    if read_text('/sys/class/net/eth0/operstate') == 'up':
-        return None
     return {'connected': False} if os.path.exists('/sys/class/net/wlan0') else None
+
+
+def ethernet():
+    """De netwerkkabel: { connected, speed_mbps? }; None zonder netwerkpoort"""
+    names = sorted(n for n in os.listdir('/sys/class/net') if n.startswith(('eth', 'en'))) if os.path.isdir('/sys/class/net') else []
+    if not names:
+        return None
+    base = '/sys/class/net/' + names[0]
+    connected = read_text(base + '/carrier') == '1' and read_text(base + '/operstate') == 'up'
+    out = {'connected': connected}
+    speed = read_text(base + '/speed')
+    if connected and speed.isdigit() and int(speed) > 0:
+        out['speed_mbps'] = int(speed)
+    return out
+
+
+def uplink():
+    """Via welke verbinding de Pi nu internet heeft (de standaardroute): 'ethernet', 'wifi' of None"""
+    m = re.search(r'\bdev (\S+)', run(['ip', 'route', 'get', '1.1.1.1']))
+    if not m:
+        return None
+    dev = m.group(1)
+    return 'ethernet' if dev.startswith(('eth', 'en')) else 'wifi' if dev.startswith('wl') else None
 
 
 def pi_health():
@@ -346,6 +367,12 @@ class Agent:
         w = wifi()
         if w is not None:
             s['wifi'] = w
+        e = ethernet()
+        if e is not None:
+            s['ethernet'] = e
+        up = uplink()
+        if up:
+            s['uplink'] = up
         if self.clock_skew is not None:
             s['clock_skew_s'] = self.clock_skew
         # Ook leeg: zo weet EventVOX dat deze versie wifi-netwerken kan ontvangen (kiosk_wifi)
