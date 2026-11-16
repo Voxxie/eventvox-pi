@@ -5,6 +5,7 @@
 - Een Raspberry Pi 3B of nieuwer, met de officiële voeding
 - Een SD-kaart (8 GB of meer)
 - Een scherm via HDMI (het geluid van de scanterminal gaat via HDMI) en een USB-scanner
+- Optioneel een USB-NFC-lezer voor polsbandjes (zie [bediening](bediening.md#nfc-lezer))
 - Netwerk: een kabel of wifi
 
 ## Twee manieren

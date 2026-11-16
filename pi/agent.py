@@ -35,6 +35,12 @@ STATE_DIR = os.environ.get('EVX_PI_STATE', '/var/lib/eventvox-pi')
 CDP = os.environ.get('EVX_PI_CDP', 'http://127.0.0.1:9222')
 DRYRUN = os.environ.get('EVX_PI_DRYRUN') == '1'
 TICK = float(os.environ.get('EVX_PI_TICK', '5'))
+# Tests: een bestand waarin regels met NFC-nummers verschijnen (in plaats van een echte lezer), en een bestand dat
+# bestaat zolang het bijwerken loopt (in plaats van systemctl)
+NFC_FAKE = os.environ.get('EVX_PI_NFC_FAKE')
+UPDATE_FAKE = os.environ.get('EVX_PI_UPDATE_ACTIVE')
+MAINTENANCE_UPDATE = 'De terminal wordt bijgewerkt. Even geduld: hij start daarna vanzelf weer.'
+MAINTENANCE_REBOOT = 'De terminal start opnieuw op. Even geduld.'
 ROOT_HELPER = '/usr/local/sbin/eventvox-pi-root'
 CONFIG = '/etc/eventvox-pi/config'
 LOG_LINES = 300
@@ -331,6 +337,8 @@ class Agent:
         self.state = read_json('state.json', {})   # last_command_id, settings_version, settings, nightly_day, ...
         self.bridge = read_text(os.path.join(HOME, 'bridge.js'))
         self.locate_js = read_text(os.path.join(HOME, 'locate.js'))
+        self.maintenance_js = read_text(os.path.join(HOME, 'maintenance.js'))
+        self.maintenance = None   # de tekst die nu op het scherm staat (None: geen onderhoud)
         self.page = None
         self.page_id = None
         self.log_id = 0
@@ -437,6 +445,8 @@ class Agent:
                     self.log.add('Diagnose verstuurd')
         elif method == 'Page.loadEventFired':
             self.push(True)
+            if self.maintenance:
+                self.show_maintenance(self.maintenance, force=True)  # na herladen opnieuw tonen
 
     def diag_extra(self):
         h = pi_health()
@@ -465,6 +475,7 @@ class Agent:
         elif name == 'restart':
             self.restart_browser('opdracht uit EventVOX')
         elif name == 'reboot':
+            self.show_maintenance(MAINTENANCE_REBOOT)
             self.root('reboot')
         elif name == 'update':
             self.root('update')
@@ -664,12 +675,121 @@ class Agent:
         except (ConnectionError, RuntimeError, ValueError, TypeError):
             return 10 ** 6
 
+    # --- onderhoud op het scherm ---
+
+    def show_maintenance(self, text, force=False):
+        """Onderhoud op het scherm (text) of weer weg (None)"""
+        if text == self.maintenance and not force:
+            return
+        self.maintenance = text
+        if self.page and self.page.alive and self.maintenance_js:
+            try:
+                self.page.call('Runtime.evaluate', {'expression': self.maintenance_js + f'window.__evxMaintenance({json.dumps(text)})'})
+            except (ConnectionError, RuntimeError):
+                pass
+
+    def update_running(self):
+        if UPDATE_FAKE:
+            return os.path.exists(UPDATE_FAKE)
+        try:
+            return subprocess.run(['systemctl', 'is-active', '--quiet', 'eventvox-pi-update.service'], timeout=5).returncode == 0
+        except (OSError, subprocess.SubprocessError):
+            return False
+
+    def check_maintenance(self):
+        running = self.update_running()
+        if running and self.maintenance != MAINTENANCE_UPDATE:
+            self.log.add('Onderhoud: bijwerken loopt')
+            self.show_maintenance(MAINTENANCE_UPDATE)
+        elif not running and self.maintenance == MAINTENANCE_UPDATE:
+            self.log.add('Onderhoud klaar')
+            self.show_maintenance(None)
+
+    # --- NFC-lezers zonder toetsenbord-modus (PC/SC, bijvoorbeeld de ACS ACR122U) ---
+
+    def type_text(self, text):
+        """Typen in de scanterminal, met Enter erachter, zoals een scanner-toetsenbord"""
+        page = self.page
+        if not page or not page.alive:
+            return
+        try:
+            # Elk teken als echte toetsaanslag: de scanterminal leest keydown, zoals van een scanner-toetsenbord
+            for ch in text:
+                page.call('Input.dispatchKeyEvent', {'type': 'keyDown', 'key': ch, 'text': ch, 'unmodifiedText': ch})
+                page.call('Input.dispatchKeyEvent', {'type': 'keyUp', 'key': ch})
+            for kind in ('keyDown', 'keyUp'):
+                page.call('Input.dispatchKeyEvent', {'type': kind, 'key': 'Enter', 'code': 'Enter', 'windowsVirtualKeyCode': 13,
+                                                     'nativeVirtualKeyCode': 13, **({'text': '\r'} if kind == 'keyDown' else {})})
+        except (ConnectionError, RuntimeError):
+            pass
+
+    def nfc_uids(self):
+        """Elke ronde: het nummer van de kaart op een lezer (of None). Echt: PC/SC (pcscd + pyscard); tests: een bestand."""
+        if NFC_FAKE:
+            offset = 0
+            while True:
+                try:
+                    with open(NFC_FAKE, encoding='utf-8') as f:
+                        f.seek(offset)
+                        line = f.readline()
+                        if line.endswith('\n'):
+                            offset = f.tell()
+                            yield line.strip() or None
+                            continue
+                except OSError:
+                    pass
+                yield None
+                time.sleep(0.25)
+        try:
+            from smartcard.System import readers
+        except ImportError:
+            self.log.add('NFC: pyscard ontbreekt (alleen lezers die zelf typen werken)')
+            return
+        warned = False
+        while True:
+            uid = None
+            try:
+                for r in readers():
+                    try:
+                        c = r.createConnection()
+                        c.connect()
+                        data, sw1, sw2 = c.transmit([0xFF, 0xCA, 0x00, 0x00, 0x00])  # het nummer (UID) van de kaart
+                        c.disconnect()
+                        if (sw1, sw2) == (0x90, 0x00) and data:
+                            uid = ''.join('%02X' % b for b in data)
+                            break
+                    except Exception:  # geen kaart op deze lezer, of de lezer is net weg
+                        continue
+            except Exception as e:  # pcscd niet bereikbaar
+                if not warned:
+                    self.log.add('NFC: PC/SC niet bereikbaar (' + type(e).__name__ + ')')
+                    warned = True
+            yield uid
+            time.sleep(0.25)
+
+    def nfc_loop(self):
+        """Een kaart die op de lezer komt één keer typen (blijft hij liggen: niet opnieuw); nooit het nummer in het logboek"""
+        present, gone_at = None, 0.0
+        for uid in self.nfc_uids():
+            now = time.time()
+            if uid is None:
+                if present and now - gone_at > 1.0:
+                    present = None
+                continue
+            gone_at = now
+            if uid != present:
+                present = uid
+                self.log.add('NFC-kaart gelezen')
+                self.type_text(uid)
+
     def run(self):
         self.log.add('EventVOX-Pi ' + self.version + ' gestart')
+        threading.Thread(target=self.nfc_loop, daemon=True).start()
         while True:
             try:
                 self.connect()
                 self.push()
+                self.check_maintenance()
                 self.check_clock()
                 self.nightly()
             except (OSError, ValueError, ConnectionError, RuntimeError):

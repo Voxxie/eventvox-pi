@@ -5,7 +5,7 @@
 //   FRONTEND=/pad/naar/eventvox-frontend node --test …  ook tegen de echte scanterminal van EventVOX
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
@@ -42,7 +42,9 @@ before(async () => {
     agent = spawn('python3', [AGENT], {
         env: { ...process.env, EVX_PI_CDP: `http://127.0.0.1:${PORT}`, EVX_PI_STATE: stateDir, EVX_PI_DRYRUN: '1', EVX_PI_TICK: '0.3',
             // Wifi: wifi.py zonder sudo, met een nagebootste nmcli
-            EVX_PI_WIFI: fileURLToPath(new URL('../pi/wifi.py', import.meta.url)), EVX_PI_SSH: fileURLToPath(new URL('../pi/ssh.py', import.meta.url)), EVX_PI_SSH_HOME: join(stateDir, 'home'), NMCLI: fileURLToPath(new URL('./fake-nmcli', import.meta.url)), FAKE_NM: stateDir,
+            EVX_PI_WIFI: fileURLToPath(new URL('../pi/wifi.py', import.meta.url)), EVX_PI_SSH: fileURLToPath(new URL('../pi/ssh.py', import.meta.url)), EVX_PI_SSH_HOME: join(stateDir, 'home'),
+            // NFC: nummers uit een bestand in plaats van een lezer; onderhoud: een bestand in plaats van systemctl
+            EVX_PI_NFC_FAKE: join(stateDir, 'nfc'), EVX_PI_UPDATE_ACTIVE: join(stateDir, 'updating'), NMCLI: fileURLToPath(new URL('./fake-nmcli', import.meta.url)), FAKE_NM: stateDir,
             EVX_PI_PAGE_MATCH: '^http://127\\.0\\.0\\.1:\\d+/scanterminal' },
     });
     agent.stdout.on('data', (d) => { agentOut += d; });
@@ -132,6 +134,39 @@ test('SSH keys from EventVOX: in authorized_keys once per version, reported in t
     await page.close();
 });
 
+test('an NFC reader without keyboard mode (PC/SC): the number is typed with Enter, once while the card lies there', async () => {
+    const page = await terminalPage();
+    // Zoals de scanterminal: losse keydown-events op document (geen invoerveld)
+    await page.evaluate(() => {
+        window.__typed = [];
+        let buf = '';
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { window.__typed.push(buf); buf = ''; } else if (e.key.length === 1) buf += e.key;
+        });
+    });
+    appendFileSync(join(stateDir, 'nfc'), '04A1B2C3\n04A1B2C3\n');
+    await until(() => page.evaluate(() => window.__typed.length >= 1));
+    await wait(600);
+    assert.deepEqual(await page.evaluate(() => window.__typed), ['04A1B2C3'], 'typed twice while the card lay there');
+    await wait(1300);
+    appendFileSync(join(stateDir, 'nfc'), '04A1B2C3\n');
+    await until(() => page.evaluate(() => window.__typed.length === 2));
+    assert.doesNotMatch(readFileSync(join(stateDir, 'log.txt'), 'utf8'), /04A1B2C3/, 'the number in the log');
+    await page.close();
+});
+
+test('maintenance: on the screen while updating, gone afterwards', async () => {
+    const page = await terminalPage();
+    writeFileSync(join(stateDir, 'updating'), '');
+    await page.getByText('De terminal wordt bijgewerkt').waitFor({ timeout: 8000 });
+    // Also after a reload
+    await page.reload();
+    await page.getByText('De terminal wordt bijgewerkt').waitFor({ timeout: 8000 });
+    rmSync(join(stateDir, 'updating'));
+    await page.getByText('De terminal wordt bijgewerkt').waitFor({ state: 'detached', timeout: 8000 });
+    await page.close();
+});
+
 test('diagnosis: the log goes with getStatus once', async () => {
     const page = await terminalPage();
     await page.evaluate(() => window.WebKiosk.requestDiagnostics());
@@ -158,6 +193,7 @@ test('the real scanterminal of EventVOX hands the Pi\'s state and a command over
     const { startFrontend } = await import(join(process.env.FRONTEND, 'tests/browser/harness.mjs'));
     const frontend = await startFrontend();
     const beats = [];
+    const sent = [];
     let command = { id: 11, command: 'update' };
     const context = await browser.newContext();
     await context.addInitScript(() => {
@@ -167,6 +203,7 @@ test('the real scanterminal of EventVOX hands the Pi\'s state and a command over
     const CP = 'dddddddd-3333-4333-8333-333333333333';
     await context.route(/^https:\/\/api\.eventvox\.nl\//, async (route) => {
         const url = new URL(route.request().url());
+        sent.push(`${route.request().method()} ${url.pathname} ${route.request().postData() ?? ''}`);
         if (url.pathname === '/terminal/heartbeat') {
             const body = JSON.parse(route.request().postData() || '{}');
             beats.push(body);
@@ -185,6 +222,9 @@ test('the real scanterminal of EventVOX hands the Pi\'s state and a command over
         assert.ok(beats.some((b) => b.kiosk_status?.app === 'pi' && b.kiosk_status?.pi), 'no Pi state in the heartbeat');
         assert.equal(command, null, 'the command was not reported done');
         assert.ok(readFileSync(join(stateDir, 'dryrun-actions'), 'utf8').includes('update'));
+        // A card on a PC/SC reader: typed into the real scanterminal, which scans it
+        appendFileSync(join(stateDir, 'nfc'), '04C0FFEE\n');
+        await until(() => sent.some((x) => x.includes('04C0FFEE')), 10000);
     } finally {
         await context.close();
         frontend.stop();

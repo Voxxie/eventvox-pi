@@ -67,7 +67,7 @@ step() { echo "==> $*"; }
 
 # --- pakketten ----------------------------------------------------------------------------------------------------------
 
-PACKAGES="labwc seatd swayidle wlrctl fonts-liberation python3 iw curl unattended-upgrades"
+PACKAGES="labwc seatd swayidle wlrctl fonts-liberation python3 iw curl unattended-upgrades pcscd python3-pyscard"
 if apt-cache show chromium-browser >/dev/null 2>&1; then PACKAGES="$PACKAGES chromium-browser"; else PACKAGES="$PACKAGES chromium"; fi
 MISSING=""
 for p in $PACKAGES; do dpkg -s "$p" >/dev/null 2>&1 || MISSING="$MISSING $p"; done
@@ -83,7 +83,7 @@ fi
 step "EventVOX-Pi $(cat pi/VERSION) installeren in $OPT"
 mkdir -p "$OPT" "$CONF_DIR" "$STATE"
 install -m 0755 pi/agent.py pi/kiosk.sh pi/update.sh pi/wifi.py pi/ssh.py "$OPT/"
-install -m 0644 pi/bridge.js pi/locate.js pi/VERSION pi/VERSION_CODE "$OPT/"
+install -m 0644 pi/bridge.js pi/locate.js pi/maintenance.js pi/VERSION pi/VERSION_CODE "$OPT/"
 install -m 0755 -o root -g root pi/eventvox-pi-root /usr/local/sbin/eventvox-pi-root
 chown "$KIOSK_USER:$KIOSK_USER" "$STATE"
 if [ ! -f "$CONF" ]; then
@@ -101,6 +101,19 @@ $KIOSK_USER ALL=(root) NOPASSWD: /usr/local/sbin/eventvox-pi-root reboot, /usr/l
 EOF
 chmod 0440 /etc/sudoers.d/eventvox-pi
 visudo -cf /etc/sudoers.d/eventvox-pi >/dev/null
+
+# NFC-lezers zonder toetsenbord-modus (PC/SC, zoals de ACS ACR122U): de kiosk-gebruiker mag ze lezen, ook zonder
+# ingelogde sessie (de agent leest het nummer en typt het in de scanterminal)
+mkdir -p /etc/polkit-1/rules.d
+cat > /etc/polkit-1/rules.d/50-eventvox-pi-pcsc.rules <<EOF
+polkit.addRule(function (action, subject) {
+    if ((action.id == "org.debian.pcsc-lite.access_pcsc" || action.id == "org.debian.pcsc-lite.access_card")
+            && subject.user == "$KIOSK_USER") {
+        return polkit.Result.YES;
+    }
+});
+EOF
+systemctl enable --now pcscd.socket >/dev/null 2>&1 || true
 
 cat > /etc/systemd/system/eventvox-pi-update.service <<'EOF'
 [Unit]

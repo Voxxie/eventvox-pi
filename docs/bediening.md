@@ -18,6 +18,22 @@ De kaart **EventVOX-Pi (Raspberry Pi)** op de pagina van de terminal:
 In de lijst krijgt een Pi met een oudere versie een oranje label (*App 1.0.0*); bovenaan staat hoeveel het er zijn, met
 **Alle bijwerken**.
 
+## NFC-lezer
+
+Een USB-NFC-lezer werkt op twee manieren:
+
+- **Een lezer die zelf typt** ("keyboard emulation", zoals de ACS ACR1281U-C2 of R80UF): typt het nummer met Enter, net
+  als een barcodescanner. Werkt meteen.
+- **Een gewone kaartlezer** (PC/SC, zoals de veelgebruikte **ACS ACR122U**): die piept alleen. EventVOX-Pi leest het
+  nummer zelf uit en typt het met Enter in de scanterminal. Een kaart die op de lezer blijft liggen telt één keer.
+
+De scanterminal herkent een polsbandje ook als het nummer decimaal of in omgekeerde volgorde binnenkomt.
+
+## Onderhoud
+
+Zolang de Pi bijwerkt (*Nu bijwerken*, of 's nachts) en vlak voor *Pi herstarten*, staat er **Onderhoud** op het scherm.
+Daarna verdwijnt het vanzelf, of start de Pi opnieuw.
+
 ## Opdrachten
 
 Op de pagina van de terminal, of voor een selectie in de lijst met **Kiosk-opdracht**. Ze komen binnen een minuut aan

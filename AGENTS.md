@@ -30,8 +30,8 @@ zijn **Nederlands**. Handleiding: `docs/` (werk die bij bij elke zichtbare wijzi
 | Pad | Wat |
 |---|---|
 | `install.sh` | Installeren (root); los gedownload haalt hij eerst het pakket van de nieuwste release |
-| `pi/agent.py` | De agent: Chrome DevTools Protocol (eigen kleine websocket, alleen de standaardbibliotheek van Python 3) |
-| `pi/bridge.js` / `pi/locate.js` | `window.WebKiosk` in de scanterminal / Zoek mij |
+| `pi/agent.py` | De agent: Chrome DevTools Protocol (eigen kleine websocket, standaardbibliotheek van Python 3); leest ook NFC-lezers zonder toetsenbord-modus (PC/SC, pyscard) en typt het nummer als toetsaanslagen + Enter (de scanterminal leest `keydown`) |
+| `pi/bridge.js` / `pi/locate.js` / `pi/maintenance.js` | `window.WebKiosk` in de scanterminal / Zoek mij / Onderhoud op het scherm (tijdens bijwerken en voor herstarten) |
 | `pi/kiosk.sh` | Chromium-lus (labwc autostart) |
 | `pi/update.sh` | Bijwerken: pakket (SHA-256) en apt; herstart alleen als er iets nieuws was |
 | `pi/wifi.py` | Wifi-netwerken uit EventVOX zetten (als root, nmcli) |

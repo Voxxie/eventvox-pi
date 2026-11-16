@@ -15,7 +15,7 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 WORK="$(mktemp -d)"
 MNT="$WORK/root"
 LOOP=""
-PACKAGES="labwc seatd swayidle wlrctl fonts-liberation python3 iw curl unattended-upgrades chromium rpi-connect"
+PACKAGES="labwc seatd swayidle wlrctl fonts-liberation python3 iw curl unattended-upgrades chromium rpi-connect pcscd python3-pyscard"
 
 cleanup() {
   set +e
