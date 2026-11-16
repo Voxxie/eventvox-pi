@@ -10,6 +10,11 @@ URL_TEMPLATE="${URL:-$URL_TEMPLATE}"
 BROWSER="$(command -v chromium-browser || command -v chromium)"
 PROFILE="$HOME/.config/eventvox-kiosk"
 mkdir -p "$PROFILE"
+# De cache van Chromium in het geheugen (/run/user, tmpfs) in plaats van op de SD-kaart: minder schrijven. De opslag van
+# de scanterminal (koppeling, offline gegevens) blijft in het profiel op de kaart. Een oude cache op de kaart weg.
+CACHE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/eventvox-cache"
+mkdir -p "$CACHE" 2>/dev/null || CACHE="$PROFILE/cache"
+rm -rf "$PROFILE/Default/Cache" "$PROFILE/Default/Code Cache" 2>/dev/null
 
 # labwc verbergt de cursor niet vanzelf: na 15 s stilte naar de hoek (Raspberry Pi Connect laat hem anders midden staan)
 command -v swayidle >/dev/null && command -v wlrctl >/dev/null && swayidle -w timeout 15 'wlrctl pointer move 10000 10000' &
@@ -62,7 +67,8 @@ while true; do
     --no-first-run \
     --check-for-update-interval=31536000 \
     --disable-component-update \
-    --disk-cache-size=67108864 \
+    --disk-cache-dir="$CACHE" \
+    --disk-cache-size=33554432 \
     --disable-pinch \
     --overscroll-history-navigation=0 \
     --autoplay-policy=no-user-gesture-required \

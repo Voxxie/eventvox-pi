@@ -48,11 +48,13 @@
   - elke week, in de nacht van zondag op maandag (`eventvox-pi-cleanup.timer`, `cleanup.sh`): oude pakketten en
     apt-downloads, crashdumps, tijdelijke bestanden ouder dan een week en oude logboeken weg; de uitkomst staat in de
     Diagnose (*Onderhoud*);
-  - het systeemlogboek hoogstens 50 MB en 2 weken;
+  - **minder schrijven naar de SD-kaart** (de kaart gaat langer mee): het systeemlogboek en de cache van Chromium staan in
+    het geheugen, niet op de kaart; na een herstart is het systeemlogboek weg (het logboek voor de Diagnose blijft). `/tmp`
+    staat al in het geheugen en Raspberry Pi OS schrijft geen leestijden (`noatime`);
   - na het bijwerken de gedownloade pakketten weg;
   - diensten die een kiosk niet gebruikt uit (ModemManager, printen) en `cloud-init` na de eerste start; Bluetooth blijft
     aan (voor Bluetooth-scanners);
-  - Chromium: cache hoogstens 64 MB, geen eigen onderdelen-updates op de achtergrond.
+  - Chromium: cache hoogstens 32 MB (in het geheugen), geen eigen onderdelen-updates op de achtergrond.
 - Wat het bewust **niet** doet: overklokken, `config.txt`, `cmdline.txt` of de initramfs wijzigen bij bijwerken. De SD-kaart
   vergroot Raspberry Pi OS zelf bij de eerste start tot de hele kaart; in EventVOX zie je vrije ruimte en totaal.
 - Raspberry Pi Connect

@@ -152,15 +152,20 @@ Persistent=true
 WantedBy=timers.target
 EOF
 
-# Systeemlogboek begrenzen: hoogstens 50 MB en 2 weken (anders groeit het tot 10% van de kaart)
+# Systeemlogboek in het geheugen in plaats van op de SD-kaart (minder schrijven: de kaart gaat langer mee), hoogstens 30 MB.
+# Na een herstart is het weg; het logboek van EventVOX-Pi zelf (log.txt, voor de Diagnose) blijft wel bewaard.
 mkdir -p /etc/systemd/journald.conf.d
 cat > /etc/systemd/journald.conf.d/eventvox-pi.conf <<'EOF'
-# EventVOX-Pi (install.sh): het logboek niet laten groeien op de SD-kaart
+# EventVOX-Pi (install.sh): het logboek in het geheugen, niet op de SD-kaart
 [Journal]
+Storage=volatile
+RuntimeMaxUse=30M
 SystemMaxUse=50M
 MaxRetentionSec=2week
 EOF
 systemctl try-restart systemd-journald >/dev/null 2>&1 || true
+# Het oude logboek op de kaart is daarna niet meer nodig
+[ -d /var/log/journal ] && find /var/log/journal -mindepth 2 -name '*.journal*' -delete 2>/dev/null || true
 
 # Diensten die een kiosk niet gebruikt: sneller opstarten, minder geheugen. Bluetooth blijft aan (scanners).
 for svc in ModemManager.service cups.service cups-browsed.service; do
