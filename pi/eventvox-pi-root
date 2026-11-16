@@ -1,0 +1,7 @@
+#!/bin/bash
+# Wat de agent als root mag (via sudo, zie /etc/sudoers.d/eventvox-pi): alleen de Pi herstarten en bijwerken.
+case "${1:-}" in
+  reboot) exec systemctl reboot ;;
+  update) exec systemctl start --no-block eventvox-pi-update.service ;;
+  *) echo "Gebruik: eventvox-pi-root reboot|update" >&2; exit 2 ;;
+esac

@@ -1,0 +1,81 @@
+name: Release EventVOX-Pi
+
+# Bij elke gepubliceerde GitHub-release (tag v1.0.0): het pakket (eventvox-pi-<versie>.tar.gz: install.sh en pi/) en update.json aan
+# de release hangen. De Pi's lezen update.json (formaat zoals de kiosk-app: { versionCode, versionName, url, sha256, notes }):
+#   stabiel: releases/latest/download/update.json (GitHub slaat pre-releases over)
+#   test:    releases/download/beta/update.json (de rollende pre-release "beta", ook voor pre-releases)
+# versionCode = MAJOR*10000 + MINOR*100 + PATCH: altijd hoger dan de vorige, nooit een tag hergebruiken.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    if: github.event.release.tag_name != 'beta'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Versie bepalen
+        id: version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          NAME="${TAG#v}"
+          if ! [[ "$NAME" =~ ^([0-9]+)\.([0-9]{1,2})(\.([0-9]{1,2}))?$ ]]; then
+            echo "::error::Tag '$TAG' heeft niet het formaat v1.0.0"; exit 1
+          fi
+          CODE=$(( BASH_REMATCH[1] * 10000 + BASH_REMATCH[2] * 100 + ${BASH_REMATCH[4]:-0} ))
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+
+      - name: Pakket maken
+        run: |
+          echo "${{ steps.version.outputs.name }}" > pi/VERSION
+          echo "${{ steps.version.outputs.code }}" > pi/VERSION_CODE
+          mkdir -p dist kit/eventvox-pi
+          # In het pakket: een map eventvox-pi met install.sh en pi/ (update.sh op de Pi verwacht precies dit)
+          cp -r install.sh pi kit/eventvox-pi/
+          tar --exclude='__pycache__' -czf "dist/eventvox-pi-${{ steps.version.outputs.name }}.tar.gz" -C kit eventvox-pi
+          cp install.sh dist/install.sh
+
+      - name: update.json maken
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          NOTES: ${{ github.event.release.body }}
+        run: |
+          FILE="eventvox-pi-${{ steps.version.outputs.name }}.tar.gz"
+          jq -n \
+            --argjson code "${{ steps.version.outputs.code }}" \
+            --arg name "${{ steps.version.outputs.name }}" \
+            --arg url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${FILE}" \
+            --arg sha "$(sha256sum "dist/$FILE" | cut -d' ' -f1)" \
+            --arg notes "$NOTES" \
+            '{versionCode:$code, versionName:$name, url:$url, sha256:$sha, notes:$notes}' > dist/update.json
+          cp "dist/$FILE" dist/eventvox-pi.tar.gz
+          cat dist/update.json
+
+      - name: Aan release hangen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG" dist/* --clobber
+
+      - name: Testkanaal bijwerken (release "beta")
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view beta >/dev/null 2>&1; then
+            gh release create beta --prerelease --target "$GITHUB_SHA" --title "Testkanaal" \
+              --notes "Niet installeren: hier staat alleen update.json van de nieuwste release (ook pre-releases) voor Pi's op het testkanaal."
+          fi
+          CURRENT=0
+          if gh release download beta --pattern update.json --output current.json --clobber 2>/dev/null; then
+            CURRENT=$(jq -r '.versionCode // 0' current.json)
+          fi
+          NEW=$(jq -r '.versionCode' dist/update.json)
+          if [ "$NEW" -ge "$CURRENT" ]; then gh release upload beta dist/update.json --clobber; fi
