@@ -27,7 +27,7 @@
 
 | Pad | Wat |
 |---|---|
-| `/opt/eventvox-pi/` | `agent.py`, `bridge.js`, `locate.js` (Zoek mij), `kiosk.sh`, `update.sh`, `wifi.py`, `ssh.py`, `VERSION` (alles van root, niet te wijzigen door de kiosk-gebruiker) |
+| `/opt/eventvox-pi/` | `agent.py`, `bridge.js`, `locate.js` (Zoek mij), `kiosk.sh`, `update.sh`, `cleanup.sh` (wekelijks opruimen), `wifi.py`, `ssh.py`, `VERSION` (alles van root, niet te wijzigen door de kiosk-gebruiker) |
 | `/usr/local/sbin/eventvox-pi-root` | Herstarten, bijwerken, wifi en SSH-sleutels als root |
 | `/etc/eventvox-pi/config` | Het adres (`URL`), de kiosk-gebruiker (`KIOSK_USER`) en eventueel `HDMI_AUDIO=0` (geluid niet naar HDMI) |
 | `/var/lib/eventvox-pi/` | De staat: uitgevoerde opdrachten, instellingen uit EventVOX, `log.txt`, de uitkomst van het bijwerken en van wifi (zonder wachtwoorden) |
@@ -37,10 +37,22 @@
 ## Wat het installatiescript nog meer doet
 
 - Geen vertaalbalk, inlog- of wachtwoordvragen in Chromium (policy)
-- Een **opstartscherm met het EventVOX-logo** (`pi/splash.tga`, via `rpi-splash-screen-support`) in plaats van de Linux-tekst
+- Een **opstartscherm met het EventVOX-logo** (`pi/splash.tga`, via `rpi-splash-screen-support`) in plaats van de Linux-tekst;
+  alleen bij een nieuwe installatie of in het image, nooit bij bijwerken (het bouwt de initramfs opnieuw)
 - NumLock aan in labwc (veel NFC-lezers en scanners typen hun cijfers op het numerieke toetsenblok)
 - Geen meldingen op het scherm, het scherm gaat nooit uit, geluid via HDMI (`kiosk.sh` kiest bij elke start
   de HDMI-geluidskaart van het aangesloten scherm)
 - Eigen naam en SSH-sleutels per Pi (`eventvox-<serienummer>`), ook als je een SD-kaart kloont
 - Automatische beveiligingsupdates
+- **Onderhoud** (ook bij bijwerken):
+  - elke week, in de nacht van zondag op maandag (`eventvox-pi-cleanup.timer`, `cleanup.sh`): oude pakketten en
+    apt-downloads, crashdumps, tijdelijke bestanden ouder dan een week en oude logboeken weg; de uitkomst staat in de
+    Diagnose (*Onderhoud*);
+  - het systeemlogboek hoogstens 50 MB en 2 weken;
+  - na het bijwerken de gedownloade pakketten weg;
+  - diensten die een kiosk niet gebruikt uit (ModemManager, printen) en `cloud-init` na de eerste start; Bluetooth blijft
+    aan (voor Bluetooth-scanners);
+  - Chromium: cache hoogstens 64 MB, geen eigen onderdelen-updates op de achtergrond.
+- Wat het bewust **niet** doet: overklokken, `config.txt`, `cmdline.txt` of de initramfs wijzigen bij bijwerken. De SD-kaart
+  vergroot Raspberry Pi OS zelf bij de eerste start tot de hele kaart; in EventVOX zie je vrije ruimte en totaal.
 - Raspberry Pi Connect

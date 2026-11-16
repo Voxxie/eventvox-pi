@@ -61,6 +61,8 @@ while true; do
     --disable-features=TranslateUI \
     --no-first-run \
     --check-for-update-interval=31536000 \
+    --disable-component-update \
+    --disk-cache-size=67108864 \
     --disable-pinch \
     --overscroll-history-navigation=0 \
     --autoplay-policy=no-user-gesture-required \

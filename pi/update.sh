@@ -57,6 +57,7 @@ if apt-get update -q >/dev/null 2>&1; then
   BEFORE="$(dpkg-query -W -f='${Package} ${Version}\n' | sha256sum)"
   DEBIAN_FRONTEND=noninteractive apt-get -y -q -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold upgrade >/dev/null 2>&1
   [ "$(dpkg-query -W -f='${Package} ${Version}\n' | sha256sum)" != "$BEFORE" ] && UPGRADED=1
+  apt-get clean >/dev/null 2>&1 || true   # de gedownloade pakketten zijn geïnstalleerd: weg van de SD-kaart
 fi
 
 if [ -n "$KIT" ] || [ "$UPGRADED" = 1 ]; then

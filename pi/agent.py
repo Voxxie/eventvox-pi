@@ -299,7 +299,7 @@ def uplink():
 
 
 def pi_health():
-    """{ model, temperature_c, undervoltage, undervoltage_seen, throttled, disk_free_mb }, alleen wat bekend is"""
+    """{ model, temperature_c, undervoltage, undervoltage_seen, throttled, disk_free_mb, disk_total_mb }, alleen wat bekend is"""
     out = {}
     model = read_text('/proc/device-tree/model').replace('\x00', '')
     if model:
@@ -316,6 +316,7 @@ def pi_health():
     try:
         st = os.statvfs('/')
         out['disk_free_mb'] = st.f_bavail * st.f_frsize // 1048576
+        out['disk_total_mb'] = st.f_blocks * st.f_frsize // 1048576
     except OSError:
         pass
     return out
@@ -453,6 +454,13 @@ class Agent:
         lines = ['--- Pi: ' + json.dumps(h), '--- schijf: ' + run(['df', '-h', '/']).strip().replace('\n', ' | ')]
         exits, last = self.browser_exits()
         lines.append(f'--- Chromium onverwacht gestopt: {exits}x' + (f', laatst {last}' if last else ''))
+        card = run(['lsblk', '-dno', 'SIZE', '/dev/mmcblk0']).strip()
+        if card:
+            lines.append('--- SD-kaart: ' + card)
+        clean = read_json('cleanup-result.json', {})
+        if clean.get('result'):
+            when = time.strftime('%Y-%m-%d %H:%M', time.localtime(clean.get('at', 0)))
+            lines.append(f"--- Onderhoud {when}: {str(clean['result'])[:200]}")
         return '\n'.join(lines)
 
     def command(self, raw):

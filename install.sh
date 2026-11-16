@@ -82,7 +82,7 @@ fi
 
 step "EventVOX-Pi $(cat pi/VERSION) installeren in $OPT"
 mkdir -p "$OPT" "$CONF_DIR" "$STATE"
-install -m 0755 pi/agent.py pi/kiosk.sh pi/update.sh pi/wifi.py pi/ssh.py "$OPT/"
+install -m 0755 pi/agent.py pi/kiosk.sh pi/update.sh pi/cleanup.sh pi/wifi.py pi/ssh.py "$OPT/"
 install -m 0644 pi/bridge.js pi/locate.js pi/maintenance.js pi/VERSION pi/VERSION_CODE "$OPT/"
 install -m 0755 -o root -g root pi/eventvox-pi-root /usr/local/sbin/eventvox-pi-root
 chown "$KIOSK_USER:$KIOSK_USER" "$STATE"
@@ -127,6 +127,50 @@ ExecStart=/opt/eventvox-pi/update.sh
 TimeoutStartSec=3600
 EOF
 
+# Wekelijks onderhoud (cleanup.sh): apt-downloads, oude pakketten, logboeken, crashdumps. Willekeurig moment in de nacht
+# van zondag op maandag, zodat niet alle Pi's tegelijk; een gemiste ronde (Pi stond uit) wordt bij de start ingehaald.
+cat > /etc/systemd/system/eventvox-pi-cleanup.service <<'EOF'
+[Unit]
+Description=EventVOX-Pi: wekelijks opruimen
+
+[Service]
+Type=oneshot
+Nice=10
+IOSchedulingClass=idle
+ExecStart=/opt/eventvox-pi/cleanup.sh
+EOF
+cat > /etc/systemd/system/eventvox-pi-cleanup.timer <<'EOF'
+[Unit]
+Description=EventVOX-Pi: wekelijks opruimen
+
+[Timer]
+OnCalendar=Mon *-*-* 03:00
+RandomizedDelaySec=2h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
+# Systeemlogboek begrenzen: hoogstens 50 MB en 2 weken (anders groeit het tot 10% van de kaart)
+mkdir -p /etc/systemd/journald.conf.d
+cat > /etc/systemd/journald.conf.d/eventvox-pi.conf <<'EOF'
+# EventVOX-Pi (install.sh): het logboek niet laten groeien op de SD-kaart
+[Journal]
+SystemMaxUse=50M
+MaxRetentionSec=2week
+EOF
+systemctl try-restart systemd-journald >/dev/null 2>&1 || true
+
+# Diensten die een kiosk niet gebruikt: sneller opstarten, minder geheugen. Bluetooth blijft aan (scanners).
+for svc in ModemManager.service cups.service cups-browsed.service; do
+  systemctl disable --now "$svc" >/dev/null 2>&1 || true
+done
+# cloud-init (de instellingen uit Raspberry Pi Imager) is na de eerste start klaar; daarna kost hij alleen opstarttijd.
+# Niet bij de eerste start van het image (cloud-init kan dan nog bezig zijn, bijvoorbeeld met Connect): dan bij de
+# eerste keer bijwerken.
+[ "$FIRSTBOOT" = 0 ] && [ -d /etc/cloud ] && touch /etc/cloud/cloud-init.disabled
+
 # De agent als gebruikersdienst (draait ook zonder ingelogde sessie dankzij linger)
 cat > /etc/systemd/user/eventvox-pi-agent.service <<'EOF'
 [Unit]
@@ -141,6 +185,7 @@ RestartSec=5
 WantedBy=default.target
 EOF
 systemctl daemon-reload
+systemctl enable --now eventvox-pi-cleanup.timer >/dev/null 2>&1 || true
 systemctl --global enable eventvox-pi-agent.service >/dev/null 2>&1 || true
 loginctl enable-linger "$KIOSK_USER"
 
