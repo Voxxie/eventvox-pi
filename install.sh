@@ -97,7 +97,7 @@ fi
 
 # Herstarten, bijwerken, wifi en SSH-sleutels zetten mag de agent als root, alleen deze vier
 cat > /etc/sudoers.d/eventvox-pi <<EOF
-$KIOSK_USER ALL=(root) NOPASSWD: /usr/local/sbin/eventvox-pi-root reboot, /usr/local/sbin/eventvox-pi-root update, /usr/local/sbin/eventvox-pi-root wifi, /usr/local/sbin/eventvox-pi-root ssh
+$KIOSK_USER ALL=(root) NOPASSWD: /usr/local/sbin/eventvox-pi-root reboot, /usr/local/sbin/eventvox-pi-root update, /usr/local/sbin/eventvox-pi-root update-app, /usr/local/sbin/eventvox-pi-root wifi, /usr/local/sbin/eventvox-pi-root ssh
 EOF
 chmod 0440 /etc/sudoers.d/eventvox-pi
 visudo -cf /etc/sudoers.d/eventvox-pi >/dev/null
@@ -125,6 +125,17 @@ After=network-online.target
 Type=oneshot
 ExecStart=/opt/eventvox-pi/update.sh
 TimeoutStartSec=3600
+EOF
+cat > /etc/systemd/system/eventvox-pi-update-app.service <<'EOF'
+[Unit]
+Description=Alleen EventVOX-Pi bijwerken (geen Raspberry Pi OS, geen herstart van de Pi)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/eventvox-pi/update.sh app
+TimeoutStartSec=900
 EOF
 
 # Wekelijks onderhoud (cleanup.sh): apt-downloads, oude pakketten, logboeken, crashdumps. Willekeurig moment in de nacht

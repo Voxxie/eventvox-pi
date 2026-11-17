@@ -54,7 +54,8 @@ LOG_LINES = 300
 DEFAULT_PAGE_MATCH = r'^https://([a-z0-9-]+\.)*eventvox\.nl/scanterminal'
 # Instellingen uit EventVOX die een Pi gebruikt; de rest (NFC, trillen, volume, ...) hoort bij de Zebra
 SETTINGS = {'update_channel': ('stable', 'beta'), 'auto_update': bool, 'nightly_reload': bool, 'nightly_hour': (0, 23)}
-DEFAULTS = {'update_channel': 'stable', 'auto_update': True, 'nightly_reload': True, 'nightly_hour': 4}
+# Nachtelijk bijwerken staat standaard uit (sinds 0.0.13): bijwerken als iemand het in EventVOX vraagt, of aanzetten
+DEFAULTS = {'update_channel': 'stable', 'auto_update': False, 'nightly_reload': True, 'nightly_hour': 4}
 
 
 # ---------- opslag ----------
@@ -503,6 +504,8 @@ class Agent:
             self.root('reboot')
         elif name == 'update':
             self.root('update')
+        elif name == 'update_app':
+            self.root('update-app')
         elif name == 'locate':
             self.locate()
         elif name == 'connect_signin':
@@ -604,9 +607,10 @@ class Agent:
             self.log.add('Browser herstarten mislukt: ' + str(e))
 
     def root(self, action, stdin=None):
-        """Pi herstarten, bijwerken, wifi of SSH-sleutels zetten (als root, via sudo; alleen deze vier). stdin: invoer"""
+        """Pi herstarten, bijwerken (alles of alleen EventVOX-Pi), wifi of SSH-sleutels zetten (als root, via sudo). stdin: invoer"""
         if action not in ('wifi', 'ssh'):
-            self.log.add(('Pi herstarten' if action == 'reboot' else 'Bijwerken gestart') + (' (proef, niet echt)' if DRYRUN else ''))
+            what = {'reboot': 'Pi herstarten', 'update': 'Alles bijwerken gestart', 'update-app': 'EventVOX-Pi bijwerken gestart'}.get(action, action)
+            self.log.add(what + (' (proef, niet echt)' if DRYRUN else ''))
         if DRYRUN:
             with open(path('dryrun-actions'), 'a') as f:
                 f.write(action + '\n')
@@ -787,8 +791,9 @@ class Agent:
         """Of eventvox-pi-update.service bezig is. Niet de afsluitcode van is-active: die is alleen 0 bij "active", en een
         eenmalige dienst is tijdens het bijwerken "activating" (daardoor stond er tot v0.0.12 nooit Onderhoud)."""
         try:
-            out = subprocess.run([SYSTEMCTL, 'is-active', 'eventvox-pi-update.service'], capture_output=True, text=True, timeout=5)
-            return out.stdout.strip() in UPDATE_BUSY
+            out = subprocess.run([SYSTEMCTL, 'is-active', 'eventvox-pi-update.service', 'eventvox-pi-update-app.service'],
+                                 capture_output=True, text=True, timeout=5)
+            return any(line.strip() in UPDATE_BUSY for line in out.stdout.splitlines())
         except (OSError, subprocess.SubprocessError):
             return False
 

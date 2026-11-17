@@ -1,9 +1,12 @@
 #!/bin/bash
-# Bijwerken (als root, eventvox-pi-update.service): eerst EventVOX-Pi zelf, dan Raspberry Pi OS en Chromium (apt).
+# Bijwerken (als root). Zonder argument (eventvox-pi-update.service, "Alles bijwerken"): eerst EventVOX-Pi zelf, dan
+# Raspberry Pi OS en Chromium (apt); is er iets nieuws, dan herstart de Pi. Met "app" (eventvox-pi-update-app.service,
+# "EventVOX-Pi bijwerken"): alleen EventVOX-Pi, geen apt en geen herstart van de Pi: de agent en de browser herstarten.
 # De nieuwste versie staat als update.json bij de GitHub-releases van Voxxie/eventvox-pi, in hetzelfde formaat
 # als de kiosk-app: { versionCode, versionName, url, sha256, notes }. Kanaal "stable" of "beta" (instelling uit EventVOX).
 # Is er iets nieuws geïnstalleerd, dan herstart de Pi. De uitkomst gaat met de status naar EventVOX (update-result.json).
 set -uo pipefail
+MODE="${1:-all}"
 STATE="${EVX_PI_STATE:-/var/lib/eventvox-pi}"
 OPT="${EVX_PI_OPT:-/opt/eventvox-pi}"
 REPO="Voxxie/eventvox-pi"
@@ -49,6 +52,22 @@ if curl -fsSL --max-time 30 -o "$TMP/update.json" "$INDEX"; then
   fi
 else
   FAILED="Controle mislukt: GitHub niet bereikbaar"
+fi
+
+if [ "$MODE" = app ]; then
+  if [ -n "$KIT" ]; then
+    result "Bijgewerkt: $KIT; de browser herstart"
+    # De nieuwe agent en een nieuwe browser (kiosk.sh start hem opnieuw; geen crash: restart-requested). Wijzigingen in
+    # kiosk.sh zelf gelden vanaf de volgende herstart van de Pi.
+    touch "$STATE/restart-requested" && chown --reference="$STATE" "$STATE/restart-requested" 2>/dev/null
+    pkill -u "${KIOSK_USER:-nobody-evx}" -x chromium 2>/dev/null || pkill -u "${KIOSK_USER:-nobody-evx}" -x chromium-browser 2>/dev/null
+    systemctl --machine="${KIOSK_USER:-nobody-evx}@.host" --user restart eventvox-pi-agent.service >/dev/null 2>&1 || true
+  elif [ -n "$FAILED" ]; then
+    result "$FAILED"
+  else
+    result "Actueel ($(cat "$OPT/VERSION" 2>/dev/null || echo onbekend))"
+  fi
+  exit 0
 fi
 
 # Raspberry Pi OS en Chromium

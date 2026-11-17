@@ -1,9 +1,15 @@
 #!/bin/bash
-# Nagebootst systemctl voor de tests, zoals het echte: is-active geeft de staat uit $FAKE_SYSTEMCTL/<dienst> (anders
-# inactive) en alleen bij "active" afsluitcode 0. Een eenmalige dienst die bezig is, is "activating" (code 3).
+# Nagebootst systemctl voor de tests, zoals het echte: is-active geeft per dienst de staat uit $FAKE_SYSTEMCTL/<dienst>
+# (anders inactive), één regel per dienst, en afsluitcode 0 alleen als er een "active" is. Een eenmalige dienst die
+# bezig is, is "activating".
 if [ "$1" = is-active ]; then
-  state="$(cat "${FAKE_SYSTEMCTL:?}/$2" 2>/dev/null || echo inactive)"
-  echo "$state"
-  [ "$state" = active ] && exit 0 || exit 3
+  shift
+  code=3
+  for unit in "$@"; do
+    state="$(cat "${FAKE_SYSTEMCTL:?}/$unit" 2>/dev/null || echo inactive)"
+    echo "$state"
+    [ "$state" = active ] && code=0
+  done
+  exit "$code"
 fi
 exit 0

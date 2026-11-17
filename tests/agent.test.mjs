@@ -102,8 +102,10 @@ test('a command runs once per id and is reported done; reboot and update (dry ru
     await page.evaluate(() => window.WebKiosk.command(JSON.stringify({ id: 7, command: 'reboot' })));
     await page.evaluate(() => window.WebKiosk.command(JSON.stringify({ id: 8, command: 'update' })));
     await until(async () => (await status(page)).command_done === 8);
+    // Only EventVOX-Pi (no Linux, no reboot of the Pi): its own root action
+    await page.evaluate(() => window.WebKiosk.command(JSON.stringify({ id: 9, command: 'update_app' })));
     await wait(1500);
-    assert.deepEqual(readFileSync(join(stateDir, 'dryrun-actions'), 'utf8').trim().split('\n'), ['reboot', 'update']);
+    assert.deepEqual(readFileSync(join(stateDir, 'dryrun-actions'), 'utf8').trim().split('\n'), ['reboot', 'update', 'update-app']);
     // Settings: what a Pi uses; the rest (NFC, volume) is not for a Pi
     await page.evaluate(() => window.WebKiosk.applySettings(JSON.stringify({ version: 3, values: { update_channel: 'beta', volume_lock: 60, nightly_hour: 5 } })));
     await until(async () => (await status(page)).settings_version === 3);
@@ -172,6 +174,12 @@ test('maintenance: on the screen while updating (the oneshot service is "activat
     await page.getByText('De terminal wordt bijgewerkt').waitFor({ timeout: 8000 });
     writeFileSync(unit, 'inactive\n');
     await page.getByText('De terminal wordt bijgewerkt').waitFor({ state: 'detached', timeout: 8000 });
+    // Only EventVOX-Pi: its own service, the same screen
+    const app = join(stateDir, 'units', 'eventvox-pi-update-app.service');
+    writeFileSync(app, 'activating\n');
+    await page.getByText('De terminal wordt bijgewerkt').waitFor({ timeout: 8000 });
+    writeFileSync(app, 'inactive\n');
+    await page.getByText('De terminal wordt bijgewerkt').waitFor({ state: 'detached', timeout: 8000 });
     await page.close();
 });
 
@@ -187,12 +195,12 @@ test('diagnosis: the log goes with getStatus once', async () => {
 
 test('Zoek mij: a flashing screen that a key stops; reload', async () => {
     const page = await terminalPage();
-    await page.evaluate(() => window.WebKiosk.command(JSON.stringify({ id: 9, command: 'locate' })));
+    await page.evaluate(() => window.WebKiosk.command(JSON.stringify({ id: 12, command: 'locate' })));
     await page.getByText('Hier ben ik!').waitFor({ timeout: 8000 });
     await page.keyboard.press('a');
     await page.getByText('Hier ben ik!').waitFor({ state: 'detached' });
     await page.evaluate(() => { window.__before = 1; });
-    await page.evaluate(() => window.WebKiosk.command(JSON.stringify({ id: 10, command: 'reload' })));
+    await page.evaluate(() => window.WebKiosk.command(JSON.stringify({ id: 13, command: 'reload' })));
     await until(() => page.evaluate(() => window.__before === undefined).catch(() => false));
     await page.close();
 });
@@ -202,7 +210,7 @@ test('the real scanterminal of EventVOX hands the Pi\'s state and a command over
     const frontend = await startFrontend();
     const beats = [];
     const sent = [];
-    let command = { id: 11, command: 'update' };
+    let command = { id: 14, command: 'update' };
     const context = await browser.newContext();
     await context.addInitScript(() => {
         localStorage.setItem('eventvox.terminal.token', 'terminal-token');
@@ -226,7 +234,7 @@ test('the real scanterminal of EventVOX hands the Pi\'s state and a command over
     const page = await context.newPage();
     await page.goto(`${frontend.url}/scanterminal/?serial=abc`);
     try {
-        await until(() => beats.some((b) => b.kiosk_status?.command_done === 11), 15000);
+        await until(() => beats.some((b) => b.kiosk_status?.command_done === 14), 15000);
         assert.ok(beats.some((b) => b.kiosk_status?.app === 'pi' && b.kiosk_status?.pi), 'no Pi state in the heartbeat');
         assert.equal(command, null, 'the command was not reported done');
         assert.ok(readFileSync(join(stateDir, 'dryrun-actions'), 'utf8').includes('update'));

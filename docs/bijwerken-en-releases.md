@@ -2,9 +2,12 @@
 
 ## Hoe een Pi bijwerkt
 
-- **Elke nacht** (standaard rond 4:00, na 5 minuten zonder scans) kijkt de Pi of er een nieuwe EventVOX-Pi is, en
-  installeert hij de updates van Raspberry Pi OS en Chromium. Was er iets nieuws, dan herstart hij.
-- **Nu bijwerken** in EventVOX doet hetzelfde meteen.
+- **EventVOX-Pi bijwerken** in EventVOX: alleen EventVOX-Pi zelf (seconden). Is er een nieuwe versie, dan starten de
+  agent en de browser opnieuw; de Pi zelf herstart niet. Handig vlak voor of tijdens een evenement.
+- **Alles bijwerken** in EventVOX: EventVOX-Pi én de updates van Raspberry Pi OS en Chromium (op een Pi 3 soms 5 tot 20
+  minuten). Was er iets nieuws, dan herstart de Pi.
+- **'s Nachts** (instelling *Automatisch bijwerken*): **standaard uit** (vanaf 0.0.13). Aan: rond 4:00, na 5 minuten
+  zonder scans, hetzelfde als *Alles bijwerken*.
 - **Beveiligingsupdates** komen daarnaast elke dag automatisch (unattended-upgrades).
 
 Een nieuwe EventVOX-Pi wordt gecontroleerd (SHA-256) voordat hij wordt geïnstalleerd. Elke oudere versie kan meteen naar

@@ -31,7 +31,7 @@ De scanterminal herkent een polsbandje ook als het nummer decimaal of in omgekee
 
 ## Onderhoud
 
-Zolang de Pi bijwerkt (*Nu bijwerken*, of 's nachts) en vlak voor *Pi herstarten*, staat er **Onderhoud** op het scherm.
+Zolang de Pi bijwerkt (*EventVOX-Pi bijwerken*, *Alles bijwerken*, of 's nachts) en vlak voor *Pi herstarten*, staat er **Onderhoud** op het scherm.
 Daarna verdwijnt het vanzelf, of start de Pi opnieuw.
 
 ## Opdrachten
@@ -44,7 +44,8 @@ en worden één keer uitgevoerd.
 | **Pagina herladen** | De scanterminal laadt opnieuw |
 | **App herstarten** | De browser start opnieuw |
 | **Pi herstarten** | De hele Pi start opnieuw op (ongeveer een minuut) |
-| **Nu bijwerken** | De nieuwste EventVOX-Pi en de updates van de Pi zelf; daarna herstart hij, alleen als er iets nieuws was |
+| **EventVOX-Pi bijwerken** | Alleen de nieuwste EventVOX-Pi; daarna starten de agent en de browser opnieuw (de Pi niet) |
+| **Alles bijwerken** | De nieuwste EventVOX-Pi en de updates van Raspberry Pi OS en Chromium; daarna herstart de Pi, alleen als er iets nieuws was |
 | **Zoek mij** | 30 seconden een knipperend scherm en piepen via het scherm; een tik of toets stopt het. Een Pi heeft geen GPS: geen locatie |
 | **Koppelen met Connect** | Zie hieronder |
 | **Ontkoppelen van Connect** | De Pi verdwijnt uit je Raspberry Pi Connect-account |
@@ -95,7 +96,7 @@ Een Pi gebruikt van de kiosk-instellingen alleen:
 | Instelling | Standaard |
 |---|---|
 | **Kanaal** | Stabiel (*Test*: ook pre-releases) |
-| **Automatisch bijwerken** | Aan: 's nachts bijwerken |
+| **Automatisch bijwerken** | Uit (vanaf 0.0.13); aan: 's nachts alles bijwerken |
 | **'s Nachts herladen** | Aan: 's nachts de browser opnieuw starten (geheugen) |
 | **Herladen om** | 04:00 |
 
