@@ -38,8 +38,14 @@ Download het `.img.xz`-bestand niet los om te openen met *Use custom*: dan weet 
    - **Raspberry Pi Connect**: plak een auth key (zie hieronder).
 3. Schrijf de kaart, zet hem in de Pi en zet de Pi aan.
 
-De Pi start, richt de kiosk in (een paar minuten) en herstart één keer. Daarna staat er een **code van 6 tekens** op het
-scherm: ga verder bij [Koppelen in EventVOX](#4-koppelen-in-eventvox).
+De Pi start, richt de kiosk in en herstart één keer. Op een Pi 3 duurt dat ongeveer 5 tot 10 minuten (de eerste start
+vergroot ook de kaart en verwerkt de instellingen uit Imager). Onder het logo staat intussen wat hij doet: de stap
+("stap 6 van ongeveer 14, …"), hoe lang hij al bezig is en het IP-adres. Zolang de minuten oplopen, is hij bezig: niet
+uitzetten. Daarna staat er een **code van 6 tekens** op het scherm: ga verder bij
+[Koppelen in EventVOX](#4-koppelen-in-eventvox).
+
+Staat er *Inrichten mislukt*, herstart de Pi dan: hij probeert het opnieuw. Het logboek staat in
+`/var/log/eventvox-pi-firstboot.log` (via SSH).
 
 Bijwerken gaat daarna vanzelf (zie [bijwerken](bijwerken-en-releases.md)); je hoeft een Pi niet opnieuw te flashen
 voor een nieuwe versie.

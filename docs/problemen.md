@@ -6,6 +6,7 @@ Log in via SSH of Raspberry Pi Connect (*Remote shell*).
 |---|---|
 | **Weinig vrije ruimte, of de totale grootte is veel kleiner dan de SD-kaart** | De Diagnose toont de SD-kaart en het laatste *Onderhoud*. Is de kaart niet vergroot (totaal veel kleiner dan de kaart): `sudo raspi-config`, *Advanced Options*, *Expand Filesystem*, en herstarten. Opruimen kan ook meteen: `sudo /opt/eventvox-pi/cleanup.sh`. |
 | **Traag of haperend** | Kijk eerst naar de voeding: meldt de Pi onderspanning, dan remt hij zichzelf af. Gebruik een goede voeding (Pi 3: 5,1 V / 2,5 A) en een korte kabel. |
+| **Eerste start: het logo blijft staan, er verandert niets** | Onder het logo hoort de stap en het aantal minuten te staan (vanaf v0.0.9). Staat er *wachten op de instellingen uit Raspberry Pi Imager*, dan heeft de kaart geen gebruiker: schrijf hem opnieuw en vul in Imager bij *Instellingen* een gebruikersnaam en wachtwoord in. Lopen de minuten niet meer op, of staat er na 20 minuten nog niets: via SSH `sudo tail -n 30 /var/log/eventvox-pi-firstboot.log` en `systemctl status eventvox-pi-firstboot`. |
 | **Zwart scherm** | `journalctl --user -u eventvox-pi-agent -n 50` (alleen sinds de laatste start: het systeemlogboek staat in het geheugen) en `cat /var/lib/eventvox-pi/log.txt`. Start de kiosk opnieuw met `sudo reboot`. |
 | **"Geen verbinding" op het scherm** | Netwerk controleren: `ping eventvox.nl`. Wifi: `nmcli device wifi list`. |
 | **De Pi verschijnt niet in EventVOX** | Staat er een code op het scherm? Koppel hem dan (Toegang → Terminals → Terminal koppelen). |

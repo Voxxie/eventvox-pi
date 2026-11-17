@@ -352,7 +352,7 @@ if apt-cache show rpi-connect >/dev/null 2>&1; then
     chmod 0600 "$KIOSK_HOME/.config/com.raspberrypi.connect/auth.key"
     chown -R "$KIOSK_USER:$KIOSK_USER" "$KIOSK_HOME/.config/com.raspberrypi.connect"
     # Connect vindt auth.key ook zelf bij het starten; lukt het nu meteen, dan is het bestand niet meer nodig
-    if as_user rpi-connect signin --auth-key="$KEY"; then
+    if as_user timeout 90 rpi-connect signin --auth-key="$KEY"; then
       echo "    Gekoppeld aan Raspberry Pi Connect."
       rm -f "$KIOSK_HOME/.config/com.raspberrypi.connect/auth.key"
     else
