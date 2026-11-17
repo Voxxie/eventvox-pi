@@ -2,7 +2,7 @@
 # EventVOX-Pi, eerste start van het image: wacht tot er een gebruiker is (uit Raspberry Pi Imager, of aangemaakt op het
 # scherm van de eerste start), richt dan de kiosk in met de meegeleverde install.sh (alles staat al op de kaart, er is
 # geen netwerk nodig) en herstart één keer. Daarna toont het scherm de koppelcode van EventVOX.
-# Op het scherm (onder het logo) staat intussen wat hij doet, hoe lang al en het IP-adres: zo zie je dat hij niet hangt.
+# Op het scherm (onderaan) staat intussen wat hij doet, hoe lang al en het IP-adres: zo zie je dat hij niet hangt.
 LOG="${EVX_FIRSTBOOT_LOG:-/var/log/eventvox-pi-firstboot.log}"
 TTY="${EVX_FIRSTBOOT_TTY:-/dev/tty1}"
 KIT="${EVX_FIRSTBOOT_KIT:-/opt/eventvox-pi-kit}"
@@ -14,7 +14,7 @@ TOTAL=$(grep -c '^ *step "' "$KIT/install.sh" 2>/dev/null || echo 0)
 echo "Opstarten" > "$NOW/step"
 echo 0 > "$NOW/n"
 
-# Twee regels onderaan het scherm, over het logo heen; de rest van het scherm blijft staan
+# Twee regels onderaan het scherm; de rest van het scherm blijft staan
 show() {
   { printf '\033[?25l\033[999;1H\033[2A\033[J'; printf '  %s\n  %s' "$1" "$2"; } >> "$TTY" 2>/dev/null || true
 }

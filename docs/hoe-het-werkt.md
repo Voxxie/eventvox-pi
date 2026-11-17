@@ -37,8 +37,8 @@
 ## Wat het installatiescript nog meer doet
 
 - Geen vertaalbalk, inlog- of wachtwoordvragen in Chromium (policy)
-- Een **opstartscherm met het EventVOX-logo** (`pi/splash.tga`, via `rpi-splash-screen-support`) in plaats van de Linux-tekst;
-  alleen bij een nieuwe installatie of in het image, nooit bij bijwerken (het bouwt de initramfs opnieuw)
+- Een rustige opstart: geen Linux-tekst en geen logo's van Raspberry Pi (geen eigen opstartlogo: dat vroeg een nieuwe
+  initramfs, en daarmee startten Pi's niet op)
 - NumLock aan in labwc (veel NFC-lezers en scanners typen hun cijfers op het numerieke toetsenblok)
 - Geen meldingen op het scherm, het scherm gaat nooit uit, geluid via HDMI (`kiosk.sh` kiest bij elke start
   de HDMI-geluidskaart van het aangesloten scherm)

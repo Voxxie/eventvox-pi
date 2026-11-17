@@ -211,23 +211,8 @@ EOF
 touch "$KIOSK_HOME/.hushlogin"
 chown -R "$KIOSK_USER:$KIOSK_USER" "$KIOSK_HOME/.config/labwc" "$KIOSK_HOME/.hushlogin"
 
-# Opstartscherm met het logo: alleen bij een nieuwe installatie, nooit bij bijwerken. configure-splash bouwt de initramfs
-# opnieuw; als dat op een draaiende Pi misgaat (volle opstartpartitie, stroomdip) start de Pi niet meer op (v0.0.6).
-# Het image heeft het logo al (image/build.sh). Daarnaast alleen als de Pi al een initramfs gebruikt en de
-# opstartpartitie ruimte genoeg heeft.
-BOOT_FW=/boot/firmware; [ -d "$BOOT_FW" ] || BOOT_FW=/boot
-if [ "$UPDATE" = 0 ] && [ -f pi/splash.tga ] && ! cmp -s pi/splash.tga /lib/firmware/logo.tga \
-    && ls "$BOOT_FW"/initramfs* >/dev/null 2>&1 \
-    && [ "$(df -Pm "$BOOT_FW" | awk 'NR==2 {print $4}')" -ge 150 ]; then
-  apt-cache show rpi-splash-screen-support >/dev/null 2>&1 || apt-get update -q >/dev/null 2>&1 || true
-  if apt-cache show rpi-splash-screen-support >/dev/null 2>&1; then
-    step "Opstartscherm met het EventVOX-logo (in plaats van de Linux-tekst)"
-    dpkg -s rpi-splash-screen-support >/dev/null 2>&1 || DEBIAN_FRONTEND=noninteractive apt-get install -y -q rpi-splash-screen-support initramfs-tools
-    configure-splash pi/splash.tga || echo "    Opstartscherm instellen lukte niet; de Pi start gewoon, zonder logo." >&2
-  fi
-fi
-# logo.nologo (van een oudere versie van dit script) verbergt ook het opstartlogo; alleen weghalen, verder niets aan de opstart
-for c in /boot/firmware/cmdline.txt /boot/cmdline.txt; do [ -f "$c" ] && sed -i 's/ logo\.nologo//g' "$c"; done
+# Geen eigen opstartlogo meer: dat vroeg een nieuwe initramfs, en daarmee startten Pi's niet meer op (v0.0.6 tot v0.0.9).
+# De opstart blijft die van Raspberry Pi OS; alleen de tekst gaat weg (quiet, logo.nologo), zie hieronder.
 
 if [ "$UPDATE" = 1 ]; then
   step "Bijgewerkt; de Pi herstart (update.sh)"
@@ -283,6 +268,7 @@ for key in hdmi_drive=2 hdmi_group=1; do
   if grep -q "^${key%%=*}=" "$CONFIG_TXT"; then sed -i "s/^${key%%=*}=.*/$key/" "$CONFIG_TXT"; else echo "$key" >> "$CONFIG_TXT"; fi
 done
 grep -q " quiet" "$CMDLINE_TXT" || sed -i 's/$/ quiet loglevel=1/' "$CMDLINE_TXT"
+grep -q "logo.nologo" "$CMDLINE_TXT" || sed -i 's/$/ logo.nologo/' "$CMDLINE_TXT"
 grep -q "consoleblank=" "$CMDLINE_TXT" || sed -i 's/$/ consoleblank=0/' "$CMDLINE_TXT"
 amixer cset numid=3 2 >/dev/null 2>&1 < /dev/null || true
 alsactl store >/dev/null 2>&1 || true

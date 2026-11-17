@@ -39,7 +39,7 @@ Download het `.img.xz`-bestand niet los om te openen met *Use custom*: dan weet 
 3. Schrijf de kaart, zet hem in de Pi en zet de Pi aan.
 
 De Pi start, richt de kiosk in en herstart één keer. Op een Pi 3 duurt dat ongeveer 5 tot 10 minuten (de eerste start
-vergroot ook de kaart en verwerkt de instellingen uit Imager). Onder het logo staat intussen wat hij doet: de stap
+vergroot ook de kaart en verwerkt de instellingen uit Imager). Onderaan het scherm staat intussen wat hij doet: de stap
 ("stap 6 van ongeveer 14, …"), hoe lang hij al bezig is en het IP-adres. Zolang de minuten oplopen, is hij bezig: niet
 uitzetten. Daarna staat er een **code van 6 tekens** op het scherm: ga verder bij
 [Koppelen in EventVOX](#4-koppelen-in-eventvox).
