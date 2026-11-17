@@ -319,39 +319,45 @@ EOF
 
 # --- Raspberry Pi Connect -----------------------------------------------------------------------------------------------
 
-step "Raspberry Pi Connect (op afstand meekijken en een terminal)"
-# De gebruikersdiensten draaien (linger), ook zonder dat er al iemand ingelogd is (eerste start van het image)
-systemctl start "user@$KIOSK_UID.service" >/dev/null 2>&1 || true
-if apt-cache show rpi-connect >/dev/null 2>&1; then
-  dpkg -s rpi-connect >/dev/null 2>&1 || DEBIAN_FRONTEND=noninteractive apt-get install -y -q rpi-connect
-  as_user rpi-connect on >/dev/null 2>&1 || true
-  as_user systemctl --user enable rpi-connect.service >/dev/null 2>&1 || true
-  # Een auth key (Connect, "Add device" > auth key): de Pi koppelt zichzelf, zonder in te loggen in een browser.
-  # Uit CONNECT_AUTH_KEY of het bestand connect-auth.key op de bootpartitie (dat daarna gewist wordt: de bootpartitie
-  # kan iedereen met de SD-kaart lezen).
-  KEY_FILE=""
-  for f in /boot/firmware/connect-auth.key /boot/connect-auth.key; do [ -f "$f" ] && KEY_FILE="$f"; done
-  KEY="${CONNECT_AUTH_KEY:-$( [ -n "$KEY_FILE" ] && tr -d ' \r\n' < "$KEY_FILE")}"
-  if [ -n "$KEY" ]; then
-    mkdir -p "$KIOSK_HOME/.config/com.raspberrypi.connect"
-    printf '%s' "$KEY" > "$KIOSK_HOME/.config/com.raspberrypi.connect/auth.key"
-    chmod 0600 "$KIOSK_HOME/.config/com.raspberrypi.connect/auth.key"
-    chown -R "$KIOSK_USER:$KIOSK_USER" "$KIOSK_HOME/.config/com.raspberrypi.connect"
-    # Connect vindt auth.key ook zelf bij het starten; lukt het nu meteen, dan is het bestand niet meer nodig
-    if as_user timeout 90 rpi-connect signin --auth-key="$KEY"; then
-      echo "    Gekoppeld aan Raspberry Pi Connect."
-      rm -f "$KIOSK_HOME/.config/com.raspberrypi.connect/auth.key"
+# Optioneel: lukt iets hier niet, dan gaat de inrichting gewoon door (koppelen kan later vanuit EventVOX). Zonder auth key
+# brak dit eerder de hele eerste start af (v0.0.10).
+setup_connect() {
+  # De gebruikersdiensten draaien (linger), ook zonder dat er al iemand ingelogd is (eerste start van het image)
+  systemctl start "user@$KIOSK_UID.service" >/dev/null 2>&1 || true
+  if apt-cache show rpi-connect >/dev/null 2>&1; then
+    dpkg -s rpi-connect >/dev/null 2>&1 || DEBIAN_FRONTEND=noninteractive apt-get install -y -q rpi-connect
+    as_user rpi-connect on >/dev/null 2>&1 || true
+    as_user systemctl --user enable rpi-connect.service >/dev/null 2>&1 || true
+    # Een auth key (Connect, "Add device" > auth key): de Pi koppelt zichzelf, zonder in te loggen in een browser.
+    # Uit CONNECT_AUTH_KEY of het bestand connect-auth.key op de bootpartitie (dat daarna gewist wordt: de bootpartitie
+    # kan iedereen met de SD-kaart lezen).
+    KEY_FILE=""
+    for f in /boot/firmware/connect-auth.key /boot/connect-auth.key; do [ -f "$f" ] && KEY_FILE="$f"; done
+    KEY="${CONNECT_AUTH_KEY:-}"
+    if [ -z "$KEY" ] && [ -n "$KEY_FILE" ]; then KEY="$(tr -d ' \r\n' < "$KEY_FILE")"; fi
+    if [ -n "$KEY" ]; then
+      mkdir -p "$KIOSK_HOME/.config/com.raspberrypi.connect"
+      printf '%s' "$KEY" > "$KIOSK_HOME/.config/com.raspberrypi.connect/auth.key"
+      chmod 0600 "$KIOSK_HOME/.config/com.raspberrypi.connect/auth.key"
+      chown -R "$KIOSK_USER:$KIOSK_USER" "$KIOSK_HOME/.config/com.raspberrypi.connect"
+      # Connect vindt auth.key ook zelf bij het starten; lukt het nu meteen, dan is het bestand niet meer nodig
+      if as_user timeout 90 rpi-connect signin --auth-key="$KEY"; then
+        echo "    Gekoppeld aan Raspberry Pi Connect."
+        rm -f "$KIOSK_HOME/.config/com.raspberrypi.connect/auth.key"
+      else
+        echo "    Nu koppelen lukte niet; Connect probeert het na de herstart met auth.key. Anders: rpi-connect signin" >&2
+      fi
+      if [ -n "$KEY_FILE" ]; then rm -f "$KEY_FILE"; fi
     else
-      echo "    Nu koppelen lukte niet; Connect probeert het na de herstart met auth.key. Anders: rpi-connect signin" >&2
+      echo "    Geen auth key: koppel later vanuit EventVOX (Koppelen met Connect op de pagina van de terminal)"
     fi
-    [ -n "$KEY_FILE" ] && rm -f "$KEY_FILE"
   else
-    echo "    Geen auth key: koppel later met  sudo -u $KIOSK_USER XDG_RUNTIME_DIR=/run/user/$KIOSK_UID rpi-connect signin"
+    echo "    rpi-connect niet beschikbaar (Raspberry Pi OS Bookworm of nieuwer nodig); overgeslagen."
   fi
-else
-  echo "    rpi-connect niet beschikbaar (Raspberry Pi OS Bookworm of nieuwer nodig); overgeslagen."
-fi
-
+  return 0
+}
+step "Raspberry Pi Connect (op afstand meekijken en een terminal)"
+setup_connect || echo "    Raspberry Pi Connect instellen lukte niet; koppel later vanuit EventVOX (Koppelen met Connect)." >&2
 echo ""
 if [ "$FIRSTBOOT" = 1 ]; then
   echo "==> Klaar (eerste start van het image)"
