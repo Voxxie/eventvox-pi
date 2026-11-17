@@ -40,6 +40,20 @@ echo "ok   1920x1080, 32 bits: logo in het midden, rand in de achtergrondkleur (
 fb 800 480 16 1664
 run; check 16 1664 800 480 || fail "16 bits klopt niet"
 echo "ok   800x480, 16 bits met een langere rij: logo en achtergrond"
+# Het versienummer (VERSION) klein en grijs onderaan in het midden
+fb 1920 1080 32 7680
+echo 0.0.17 > "$T/VERSION"
+EVX_PI_VERSION_FILE="$T/VERSION" run
+python3 - "$T/fb" <<'PY2'
+import sys
+d = open(sys.argv[1], 'rb').read()
+stride, grey = 7680, bytes((0x96, 0x84, 0x8a, 0))
+rows = [y for y in range(900, 1080) if grey in d[y * stride + 700 * 4:y * stride + 1220 * 4]]
+assert len(rows) >= 20, f'geen versienummer onderaan: {len(rows)} rijen'
+xs = [x for y in rows for x in range(700, 1220) if d[y * stride + x * 4:y * stride + x * 4 + 4] == grey]
+assert abs((min(xs) + max(xs)) / 2 - 960) < 10, (min(xs), max(xs))
+PY2
+echo "ok   versienummer onderaan in het midden"
 rm -rf "$T/sys"; out="$(EVX_PI_FB="$T/geen" EVX_PI_FB_SYSFS="$T/sys" EVX_PI_TTY='' EVX_PI_FB_WAIT=0.3 python3 "$ROOT/pi/splash.py")"
 [ "$out" = "Geen framebuffer: geen logo" ] || fail "zonder framebuffer: $out"
 echo "ok   geen framebuffer: geen fout, geen logo"

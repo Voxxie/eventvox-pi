@@ -35,6 +35,19 @@ PROGRESS_MAX_S = 180          # daarna stoppen, ook als de kiosk niet komt
 ANIM_PERIOD_S = 1.6           # een blokje heen en weer (als de duur onbekend is of al voorbij)
 BAR_FILL = (0xff, 0x6a, 0x00)  # oranje van EventVOX
 BAR_TRACK = (0x3a, 0x34, 0x44)
+VERSION_FILE = os.environ.get('EVX_PI_VERSION_FILE') or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'VERSION')
+TEXT_COLOR = (0x8a, 0x84, 0x96)
+# Een klein pixel-lettertype (5x7) voor het versienummer: alleen wat daarin voorkomt
+GLYPHS = {
+    '0': '01110 10001 10011 10101 11001 10001 01110', '1': '00100 01100 00100 00100 00100 00100 01110',
+    '2': '01110 10001 00001 00010 00100 01000 11111', '3': '11110 00001 00001 01110 00001 00001 11110',
+    '4': '00010 00110 01010 10010 11111 00010 00010', '5': '11111 10000 11110 00001 00001 10001 01110',
+    '6': '00110 01000 10000 11110 10001 10001 01110', '7': '11111 00001 00010 00100 01000 01000 01000',
+    '8': '01110 10001 10001 01110 10001 10001 01110', '9': '01110 10001 10001 01111 00001 00010 01100',
+    '.': '00000 00000 00000 00000 00000 01100 01100', 'v': '00000 00000 10001 10001 10001 01010 00100',
+    '-': '00000 00000 00000 11111 00000 00000 00000', 'd': '00001 00001 01101 10011 10001 10011 01101',
+    'e': '00000 00000 01110 10001 11111 10000 01110',
+}
 
 
 def read_tga(path):
@@ -145,6 +158,36 @@ def frame():
     except OSError:
         pass  # zonder cache: volgende keer opnieuw rekenen
     return data
+
+
+def draw_version(fb):
+    """Het versienummer van EventVOX-Pi, klein en grijs onderaan in het midden (bijvoorbeeld v0.0.17)"""
+    try:
+        with open(VERSION_FILE) as f:
+            text = 'v' + f.read().strip()
+    except OSError:
+        return
+    text = ''.join(c for c in text if c in GLYPHS)[:16]
+    if len(text) < 2:
+        return
+    w, h, bpp, stride = fb
+    conv = pixel_format(bpp)
+    size = bpp // 8
+    scale = max(1, h // 270)
+    color = conv(*TEXT_COLOR)
+    cw = 6 * scale  # 5 breed en 1 tussenruimte
+    x0 = (w - len(text) * cw) // 2
+    y0 = h - h // 18 - 7 * scale
+    with open(FB, 'r+b') as f:
+        for row in range(7):
+            for c_i, ch in enumerate(text):
+                bits = GLYPHS[ch].split()[row]
+                for col, bit in enumerate(bits):
+                    if bit == '1':
+                        x = x0 + c_i * cw + col * scale
+                        for dy in range(scale):
+                            f.seek((y0 + row * scale + dy) * stride + x * size)
+                            f.write(color * scale)
 
 
 def quiet_console():
@@ -279,6 +322,7 @@ def main():
         quiet_console()
         with open(FB, 'r+b') as f:
             f.write(data)
+        draw_version(fb_info())
     except (OSError, ValueError) as e:
         print(f'Logo tonen lukte niet: {e}')  # nooit een fout: de Pi start gewoon, zonder logo
     return 0

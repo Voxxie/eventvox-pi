@@ -46,7 +46,7 @@
   Onder het logo loopt een **voortgangsbalk** (`eventvox-pi-splash-progress.service`): de Pi onthoudt hoe lang het
   opstarten de vorige keer duurde (`/var/cache/eventvox-pi/boot-seconds`) en vult de balk in die tijd. Weet hij het niet
   (de eerste keer) of duurt het langer dan de vorige keer, dan schuift er een blokje heen en weer: hij is nog bezig.
-  Zodra de kiosk er is, is de balk vol.
+  Zodra de kiosk er is, is de balk vol. Onderaan staat klein het versienummer van EventVOX-Pi.
 - NumLock aan in labwc (veel NFC-lezers en scanners typen hun cijfers op het numerieke toetsenblok)
 - Geen meldingen op het scherm, het scherm gaat nooit uit, geluid via HDMI (`kiosk.sh` kiest bij elke start
   de HDMI-geluidskaart van het aangesloten scherm)
