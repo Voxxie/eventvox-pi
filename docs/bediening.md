@@ -46,6 +46,20 @@ en worden één keer uitgevoerd.
 | **Pi herstarten** | De hele Pi start opnieuw op (ongeveer een minuut) |
 | **Nu bijwerken** | De nieuwste EventVOX-Pi en de updates van de Pi zelf; daarna herstart hij, alleen als er iets nieuws was |
 | **Zoek mij** | 30 seconden een knipperend scherm en piepen via het scherm; een tik of toets stopt het. Een Pi heeft geen GPS: geen locatie |
+| **Koppelen met Connect** | Zie hieronder |
+| **Ontkoppelen van Connect** | De Pi verdwijnt uit je Raspberry Pi Connect-account |
+
+## Raspberry Pi Connect koppelen vanuit EventVOX
+
+Je kunt een Pi ook ná het inrichten aan [Raspberry Pi Connect](https://connect.raspberrypi.com) koppelen, zonder auth key:
+
+1. Open de terminal in EventVOX. Bij *Raspberry Pi Connect* staat *niet gekoppeld*: klik op **Koppelen met Connect**.
+2. Binnen een minuut verschijnt een koppellink (`connect.raspberrypi.com/verify/…`). Open hem, log in bij Raspberry Pi
+   Connect en keur de Pi goed.
+3. Daarna staat er *gekoppeld* en zie je de Pi in Connect.
+
+De link is 15 minuten geldig. Wie hem als eerste goedkeurt, krijgt de Pi in zijn account: deel hem niet. EventVOX toont
+hem alleen aan wie kiosk-opdrachten mag geven, en hij komt niet in het logboek.
 
 ## Wifi uit EventVOX
 

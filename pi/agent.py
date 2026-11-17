@@ -39,6 +39,10 @@ TICK = float(os.environ.get('EVX_PI_TICK', '5'))
 # bestaat zolang het bijwerken loopt (in plaats van systemctl)
 NFC_FAKE = os.environ.get('EVX_PI_NFC_FAKE')
 UPDATE_FAKE = os.environ.get('EVX_PI_UPDATE_ACTIVE')
+# Raspberry Pi Connect (als de kiosk-gebruiker, geen root nodig). Tests: EVX_PI_RPI_CONNECT = een nagebootst rpi-connect
+RPI_CONNECT = os.environ.get('EVX_PI_RPI_CONNECT') or 'rpi-connect'
+CONNECT_VERIFY = re.compile(r'https://connect\.raspberrypi\.com/verify/[A-Za-z0-9-]+')
+CONNECT_WAIT_S = 15 * 60   # zo lang wacht de agent tot iemand de koppellink goedkeurt
 MAINTENANCE_UPDATE = 'De terminal wordt bijgewerkt. Even geduld: hij start daarna vanzelf weer.'
 MAINTENANCE_REBOOT = 'De terminal start opnieuw op. Even geduld.'
 ROOT_HELPER = '/usr/local/sbin/eventvox-pi-root'
@@ -348,6 +352,10 @@ class Agent:
         self.clock_checked = 0
         self.last_push = None
         self.lock = threading.Lock()
+        self.rpic = None          # laatste staat van Raspberry Pi Connect { installed, signed_in }
+        self.rpic_at = 0
+        self.rpic_pending = None  # { verify_url, until } zolang een koppellink op goedkeuring wacht
+        self.rpic_busy = False
 
     def save(self):
         write_json('state.json', self.state)
@@ -393,6 +401,12 @@ class Agent:
         s['ssh_version'] = ssh_done.get('version', '') if isinstance(ssh_done.get('version'), str) else ''
         if ssh_done.get('result'):
             s['ssh_result'] = str(ssh_done['result'])[:200]
+        c = self.rpi_connect_state()
+        if c is not None:
+            c = dict(c)
+            if self.rpic_pending:
+                c.update(self.rpic_pending)
+            s['connect'] = c
         if update.get('checked_at'):
             s['update'] = {'checked_at': update['checked_at'], 'result': str(update.get('result', ''))[:160]}
         return s
@@ -489,6 +503,10 @@ class Agent:
             self.root('update')
         elif name == 'locate':
             self.locate()
+        elif name == 'connect_signin':
+            threading.Thread(target=self.rpi_connect_signin, daemon=True).start()
+        elif name == 'connect_signout':
+            threading.Thread(target=self.rpi_connect_signout, daemon=True).start()
         else:
             self.log.add('Onbekende opdracht: ' + name)
 
@@ -599,6 +617,73 @@ class Agent:
         r = subprocess.run(['sudo', '-n', ROOT_HELPER, action], input=stdin, capture_output=True, text=True, timeout=180)
         if r.returncode != 0:
             self.log.add(f'{action} mislukt: ' + (r.stderr or r.stdout).strip()[:200])
+
+    # --- Raspberry Pi Connect ---
+
+    def rpi_connect_state(self, refresh=False):
+        """{ installed, signed_in } (hoogstens elke minuut gevraagd), None als rpi-connect er niet is"""
+        if not refresh and self.rpic_at and time.time() - self.rpic_at < 60:
+            return self.rpic
+        try:
+            out = subprocess.run([RPI_CONNECT, 'status'], capture_output=True, text=True, timeout=10)
+            text = out.stdout + out.stderr
+            m = re.search(r'Signed in:\s*(yes|no)', text, re.I)
+            self.rpic = {'installed': True, 'signed_in': bool(m and m.group(1).lower() == 'yes')}
+        except FileNotFoundError:
+            self.rpic = None
+        except (OSError, subprocess.SubprocessError):
+            pass  # houd de vorige staat
+        self.rpic_at = time.time()
+        return self.rpic
+
+    def rpi_connect_signin(self):
+        """Koppelen met Raspberry Pi Connect: rpi-connect signin geeft een koppellink; die gaat met de status naar
+        EventVOX, waar een beheerder hem opent en goedkeurt. De link komt niet in het logboek."""
+        with self.lock:
+            if self.rpic_busy:
+                return
+            self.rpic_busy = True
+        try:
+            st = self.rpi_connect_state(refresh=True)
+            if st is None:
+                self.log.add('Raspberry Pi Connect: niet geïnstalleerd')
+                return
+            if st.get('signed_in'):
+                self.log.add('Raspberry Pi Connect: al gekoppeld')
+                self.push(True)
+                return
+            run([RPI_CONNECT, 'on'], timeout=20)
+            try:
+                proc = subprocess.Popen([RPI_CONNECT, 'signin'], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT, text=True)
+            except OSError:
+                self.log.add('Raspberry Pi Connect: koppelen lukte niet')
+                return
+            timer = threading.Timer(CONNECT_WAIT_S, proc.kill)
+            timer.start()
+            for line in proc.stdout:
+                m = CONNECT_VERIFY.search(line)
+                if m and not self.rpic_pending:
+                    self.rpic_pending = {'verify_url': m.group(0), 'verify_until': iso(time.time() + CONNECT_WAIT_S)}
+                    self.log.add('Raspberry Pi Connect: koppellink klaar, wacht op goedkeuring')
+                    self.push(True)
+            proc.wait()
+            timer.cancel()
+            self.rpic_pending = None
+            ok = self.rpi_connect_state(refresh=True) or {}
+            self.log.add('Raspberry Pi Connect: ' + ('gekoppeld' if ok.get('signed_in') else 'niet gekoppeld (link niet goedgekeurd of verlopen)'))
+        finally:
+            self.rpic_pending = None
+            self.rpic_busy = False
+            self.push(True)
+
+    def rpi_connect_signout(self):
+        if self.rpi_connect_state(refresh=True) is None:
+            return
+        run([RPI_CONNECT, 'signout'], timeout=30)
+        ok = self.rpi_connect_state(refresh=True) or {}
+        self.log.add('Raspberry Pi Connect: ' + ('nog gekoppeld' if ok.get('signed_in') else 'ontkoppeld'))
+        self.push(True)
 
     def locate(self):
         if self.page and self.page.alive and self.locate_js:

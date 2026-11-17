@@ -39,12 +39,14 @@ before(async () => {
     browser = await chromium.launch({ args: [`--remote-debugging-port=${PORT}`, '--autoplay-policy=no-user-gesture-required'] });
     stateDir = mkdtempSync(join(tmpdir(), 'evx-pi-'));
     mkdirSync(join(stateDir, 'home'));
+    mkdirSync(join(stateDir, 'rpic'));
     agent = spawn('python3', [AGENT], {
         env: { ...process.env, EVX_PI_CDP: `http://127.0.0.1:${PORT}`, EVX_PI_STATE: stateDir, EVX_PI_DRYRUN: '1', EVX_PI_TICK: '0.3',
             // Wifi: wifi.py zonder sudo, met een nagebootste nmcli
             EVX_PI_WIFI: fileURLToPath(new URL('../pi/wifi.py', import.meta.url)), EVX_PI_SSH: fileURLToPath(new URL('../pi/ssh.py', import.meta.url)), EVX_PI_SSH_HOME: join(stateDir, 'home'),
             // NFC: nummers uit een bestand in plaats van een lezer; onderhoud: een bestand in plaats van systemctl
             EVX_PI_NFC_FAKE: join(stateDir, 'nfc'), EVX_PI_UPDATE_ACTIVE: join(stateDir, 'updating'), NMCLI: fileURLToPath(new URL('./fake-nmcli', import.meta.url)), FAKE_NM: stateDir,
+            EVX_PI_RPI_CONNECT: fileURLToPath(new URL('./fake-rpi-connect', import.meta.url)), FAKE_RPIC: join(stateDir, 'rpic'),
             EVX_PI_PAGE_MATCH: '^http://127\\.0\\.0\\.1:\\d+/scanterminal' },
     });
     agent.stdout.on('data', (d) => { agentOut += d; });
@@ -229,6 +231,21 @@ test('the real scanterminal of EventVOX hands the Pi\'s state and a command over
         await context.close();
         frontend.stop();
     }
+});
+
+test('Raspberry Pi Connect from EventVOX: a sign-in link in the status until approved, then signed in; sign out', async () => {
+    const page = await terminalPage();
+    await until(async () => (await status(page)).connect?.installed === true);
+    assert.equal((await status(page)).connect.signed_in, false);
+    await page.evaluate(() => window.WebKiosk.command(JSON.stringify({ id: 15, command: 'connect_signin' })));
+    await until(async () => (await status(page)).connect?.verify_url === 'https://connect.raspberrypi.com/verify/ABCD-1234');
+    assert.ok((await status(page)).connect.verify_until);
+    writeFileSync(join(stateDir, 'rpic', 'approved'), '');
+    await until(async () => (await status(page)).connect?.signed_in === true && !(await status(page)).connect.verify_url);
+    assert.ok(!readFileSync(join(stateDir, 'log.txt'), 'utf8').includes('verify/'), 'the link is not in the log');
+    await page.evaluate(() => window.WebKiosk.command(JSON.stringify({ id: 16, command: 'connect_signout' })));
+    await until(async () => (await status(page)).connect?.signed_in === false);
+    await page.close();
 });
 
 test('a restart asked by EventVOX closes Chromium (kiosk.sh starts it again)', async () => {

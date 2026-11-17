@@ -1,0 +1,12 @@
+#!/bin/bash
+# Nagebootst rpi-connect voor de tests: de staat in $FAKE_RPIC (signed-in; approved = de beheerder keurde de link goed)
+D="${FAKE_RPIC:?}"
+case "$1" in
+  status) [ -f "$D/signed-in" ] && echo "Signed in: yes" || echo "Signed in: no" ;;
+  on) ;;
+  signin)
+    echo "Complete sign in by visiting https://connect.raspberrypi.com/verify/ABCD-1234"
+    for _ in $(seq 1 300); do [ -f "$D/approved" ] && { touch "$D/signed-in"; echo "Signed in successfully"; exit 0; }; sleep 0.1; done
+    exit 1 ;;
+  signout) rm -f "$D/signed-in" "$D/approved"; echo "Signed out" ;;
+esac

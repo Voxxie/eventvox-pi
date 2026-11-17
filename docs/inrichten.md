@@ -64,7 +64,7 @@ Open **Raspberry Pi Imager** op je computer:
    - optioneel **Raspberry Pi Connect** (Imager 2.0.10 of nieuwer): plak een auth key, zie hieronder.
 3. Schrijf de kaart.
 
-### 2. Raspberry Pi Connect (optioneel, aanbevolen)
+### 2. Raspberry Pi Connect (optioneel; kan ook later vanuit EventVOX)
 
 Met [Raspberry Pi Connect](https://connect.raspberrypi.com) kijk je op afstand mee op het scherm van de Pi en open je
 een terminal, zonder dat je in hetzelfde netwerk zit. Koppelen gaat met een **auth key**, zodat je per Pi niet hoeft in te
@@ -80,7 +80,8 @@ loggen:
 Een **persoonlijk** account heeft maar één key tegelijk en die verloopt na **6 uur**: maak hem vlak voor het inrichten,
 en voor elke Pi een nieuwe. Met *Connect for Organisations* kun je meerdere keys tegelijk maken (1 tot 90 dagen geldig).
 
-Zonder key kun je later koppelen met `rpi-connect signin` (als de kiosk-gebruiker).
+Zonder key koppel je later vanuit EventVOX: *Koppelen met Connect* op de pagina van de terminal (zie
+[bediening](bediening.md#raspberry-pi-connect-koppelen-vanuit-eventvox)), of met `rpi-connect signin` (als de kiosk-gebruiker).
 
 ### 3. Installeren
 
