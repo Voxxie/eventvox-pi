@@ -97,7 +97,7 @@ Een Pi gebruikt van de kiosk-instellingen alleen:
 | Instelling | Standaard |
 |---|---|
 | **Kanaal** | Stabiel (*Test*: ook pre-releases) |
-| **Automatisch bijwerken** | Uit (vanaf 0.0.13); aan: 's nachts alles bijwerken |
+| **Automatisch bijwerken** | Uit (vanaf 0.0.14); aan: 's nachts alles bijwerken |
 | **'s Nachts herladen** | Aan: 's nachts de browser opnieuw starten (geheugen) |
 | **Herladen om** | 04:00 |
 

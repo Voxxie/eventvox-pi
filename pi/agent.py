@@ -54,7 +54,7 @@ LOG_LINES = 300
 DEFAULT_PAGE_MATCH = r'^https://([a-z0-9-]+\.)*eventvox\.nl/scanterminal'
 # Instellingen uit EventVOX die een Pi gebruikt; de rest (NFC, trillen, volume, ...) hoort bij de Zebra
 SETTINGS = {'update_channel': ('stable', 'beta'), 'auto_update': bool, 'nightly_reload': bool, 'nightly_hour': (0, 23)}
-# Nachtelijk bijwerken staat standaard uit (sinds 0.0.13): bijwerken als iemand het in EventVOX vraagt, of aanzetten
+# Nachtelijk bijwerken staat standaard uit (sinds 0.0.14): bijwerken als iemand het in EventVOX vraagt, of aanzetten
 DEFAULTS = {'update_channel': 'stable', 'auto_update': False, 'nightly_reload': True, 'nightly_hour': 4}
 
 

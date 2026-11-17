@@ -6,7 +6,7 @@
   agent en de browser opnieuw; de Pi zelf herstart niet. Handig vlak voor of tijdens een evenement.
 - **Alles bijwerken** in EventVOX: EventVOX-Pi én de updates van Raspberry Pi OS en Chromium (op een Pi 3 soms 5 tot 20
   minuten). Was er iets nieuws, dan herstart de Pi.
-- **'s Nachts** (instelling *Automatisch bijwerken*): **standaard uit** (vanaf 0.0.13). Aan: rond 4:00, na 5 minuten
+- **'s Nachts** (instelling *Automatisch bijwerken*): **standaard uit** (vanaf 0.0.14). Aan: rond 4:00, na 5 minuten
   zonder scans, hetzelfde als *Alles bijwerken*.
 - **Beveiligingsupdates** komen daarnaast elke dag automatisch (unattended-upgrades).
 
