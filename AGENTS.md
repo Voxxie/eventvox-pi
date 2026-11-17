@@ -35,12 +35,13 @@ zijn **Nederlands**. Handleiding: `docs/` (werk die bij bij elke zichtbare wijzi
 | `pi/agent.py` | De agent: Chrome DevTools Protocol (eigen kleine websocket, standaardbibliotheek van Python 3); leest ook NFC-lezers zonder toetsenbord-modus (PC/SC, pyscard) en typt het nummer als toetsaanslagen + Enter (de scanterminal leest `keydown`) |
 | `pi/bridge.js` / `pi/locate.js` / `pi/maintenance.js` / `pi/refresh.js` | `window.WebKiosk` in de scanterminal / Zoek mij / Onderhoud op het scherm (tijdens bijwerken en voor herstarten) / Scherm opfrissen |
 | `pi/kiosk.sh` | Chromium-lus (labwc autostart) |
+| `pi/splash.py` / `pi/logo.tga` | Het logo bij opstarten en afsluiten, rechtstreeks op de framebuffer (`eventvox-pi-splash.service`). Nooit via de initramfs, `config.txt` of `cmdline.txt` (0.0.6 tot 0.0.9 startten daardoor niet) |
 | `pi/update.sh` | Bijwerken: pakket (SHA-256) en apt; herstart alleen als er iets nieuws was |
 | `pi/cleanup.sh` | Wekelijks opruimen als root (`eventvox-pi-cleanup.timer`); raakt nooit de opstart, instellingen of het Chromium-profiel (behalve crashrapporten) |
 | `pi/wifi.py` | Wifi-netwerken uit EventVOX zetten (als root, nmcli) |
 | `pi/ssh.py` | SSH-sleutels uit EventVOX in authorized_keys (als root) |
 | `image/` | Het SD-kaart-image (`build.sh`: officieel Raspberry Pi OS Lite 64-bit + pakketten + `/opt/eventvox-pi-kit`; `firstboot.sh`: wacht op gebruiker uit Imager, `install.sh --firstboot`, herstart; `manifest.py`: beschrijving voor Imager met `init_format` van het basis-image). Workflow `image.yml` (arm64-runner). |
-| `tests/` | `run.sh`: shellcheck, `update.test.sh`, `wifi.test.sh`, `ssh.test.sh`, `cleanup.test.sh`, `firstboot.test.sh`, `install-connect.test.sh`, `agent.test.mjs` |
+| `tests/` | `run.sh`: shellcheck, `update.test.sh`, `wifi.test.sh`, `ssh.test.sh`, `cleanup.test.sh`, `firstboot.test.sh`, `install-connect.test.sh`, `splash.test.sh`, `agent.test.mjs` |
 
 ## Testen
 Er is geen Pi: test wat kan (`tests/run.sh`, ook in CI) en zeg eerlijk wat alleen op een Pi te testen is (labwc, HDMI,

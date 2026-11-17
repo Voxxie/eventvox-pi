@@ -14,9 +14,9 @@ TOTAL=$(grep -c '^ *step "' "$KIT/install.sh" 2>/dev/null || echo 0)
 echo "Opstarten" > "$NOW/step"
 echo 0 > "$NOW/n"
 
-# Twee regels onderaan het scherm; de rest van het scherm blijft staan
+# Twee regels onderaan het scherm, wit op zwart; de rest van het scherm blijft staan
 show() {
-  { printf '\033[?25l\033[999;1H\033[2A\033[J'; printf '  %s\n  %s' "$1" "$2"; } >> "$TTY" 2>/dev/null || true
+  { printf '\033[?25l\033[999;1H\033[2A\033[J\033[97;40m'; printf '  %s\n  %s' "$1" "$2"; printf '\033[0m'; } >> "$TTY" 2>/dev/null || true
 }
 info() {
   local min ip

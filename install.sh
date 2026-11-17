@@ -90,8 +90,8 @@ fi
 
 step "EventVOX-Pi $(cat pi/VERSION) installeren in $OPT"
 mkdir -p "$OPT" "$CONF_DIR" "$STATE"
-install -m 0755 pi/agent.py pi/kiosk.sh pi/update.sh pi/cleanup.sh pi/wifi.py pi/ssh.py "$OPT/"
-install -m 0644 pi/bridge.js pi/locate.js pi/maintenance.js pi/refresh.js pi/VERSION pi/VERSION_CODE "$OPT/"
+install -m 0755 pi/agent.py pi/kiosk.sh pi/update.sh pi/cleanup.sh pi/wifi.py pi/ssh.py pi/splash.py "$OPT/"
+install -m 0644 pi/bridge.js pi/locate.js pi/maintenance.js pi/refresh.js pi/logo.tga pi/VERSION pi/VERSION_CODE "$OPT/"
 install -m 0755 -o root -g root pi/eventvox-pi-root /usr/local/sbin/eventvox-pi-root
 chown "$KIOSK_USER:$KIOSK_USER" "$STATE"
 if [ ! -f "$CONF" ]; then
@@ -147,6 +147,30 @@ After=network-online.target
 Type=oneshot
 ExecStart=/opt/eventvox-pi/update.sh app
 TimeoutStartSec=900
+EOF
+
+# Het EventVOX-logo tijdens opstarten en afsluiten (splash.py): rechtstreeks op de framebuffer zodra Linux draait. Raakt
+# de opstart niet (geen initramfs, config.txt of cmdline.txt; dat ging in 0.0.6 mis): lukt het niet, dan geen logo.
+# Gestart voor de gebruikerssessies (de kiosk neemt het scherm daarna over), gestopt na de sessies (het logo bij afsluiten).
+cat > /etc/systemd/system/eventvox-pi-splash.service <<'EOF'
+[Unit]
+Description=EventVOX-Pi: het logo tijdens opstarten en afsluiten
+DefaultDependencies=no
+After=local-fs.target
+Before=systemd-user-sessions.service shutdown.target
+Conflicts=shutdown.target
+ConditionPathExists=/opt/eventvox-pi/logo.tga
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=-/usr/bin/python3 /opt/eventvox-pi/splash.py
+ExecStop=-/usr/bin/python3 /opt/eventvox-pi/splash.py
+TimeoutStartSec=20
+TimeoutStopSec=10
+
+[Install]
+WantedBy=sysinit.target
 EOF
 
 # Wekelijks onderhoud (cleanup.sh): apt-downloads, oude pakketten, logboeken, crashdumps. Willekeurig moment in de nacht
@@ -213,6 +237,7 @@ WantedBy=default.target
 EOF
 systemctl daemon-reload
 systemctl enable --now eventvox-pi-cleanup.timer >/dev/null 2>&1 || true
+systemctl enable eventvox-pi-splash.service >/dev/null 2>&1 || true
 systemctl --global enable eventvox-pi-agent.service >/dev/null 2>&1 || true
 loginctl enable-linger "$KIOSK_USER"
 
