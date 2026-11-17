@@ -32,7 +32,7 @@
 | `/etc/eventvox-pi/config` | Het adres (`URL`), de kiosk-gebruiker (`KIOSK_USER`) en eventueel `HDMI_AUDIO=0` (geluid niet naar HDMI) |
 | `/var/lib/eventvox-pi/` | De staat: uitgevoerde opdrachten, instellingen uit EventVOX, `log.txt`, de uitkomst van het bijwerken en van wifi (zonder wachtwoorden) |
 | `~/.config/eventvox-kiosk/` | Het Chromium-profiel (hier bewaart de scanterminal zijn koppeling met EventVOX) |
-| `/etc/sudoers.d/eventvox-pi` | Wat de agent als root mag |
+| `/etc/sudoers.d/zz-eventvox-pi` | Wat de agent als root mag (`zz-`: als laatste gelezen, zodat geen ander bestand alsnog een wachtwoord vraagt) |
 
 ## Wat het installatiescript nog meer doet
 

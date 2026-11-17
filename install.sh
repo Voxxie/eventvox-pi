@@ -95,12 +95,15 @@ URL=$URL
 EOF
 fi
 
-# Herstarten, bijwerken, wifi en SSH-sleutels zetten mag de agent als root, alleen deze vier
-cat > /etc/sudoers.d/eventvox-pi <<EOF
+# Herstarten, bijwerken, wifi en SSH-sleutels zetten mag de agent als root, alleen deze. Bij sudo wint de regel die het
+# laatst gelezen wordt en /etc/sudoers.d gaat op alfabet: daarom zz-, zodat een later bestand (bijvoorbeeld van
+# cloud-init/Imager) niet alsnog een wachtwoord vraagt ("sudo: a password is required"). Het oude bestand weg.
+rm -f /etc/sudoers.d/eventvox-pi
+cat > /etc/sudoers.d/zz-eventvox-pi <<EOF
 $KIOSK_USER ALL=(root) NOPASSWD: /usr/local/sbin/eventvox-pi-root reboot, /usr/local/sbin/eventvox-pi-root update, /usr/local/sbin/eventvox-pi-root update-app, /usr/local/sbin/eventvox-pi-root wifi, /usr/local/sbin/eventvox-pi-root ssh
 EOF
-chmod 0440 /etc/sudoers.d/eventvox-pi
-visudo -cf /etc/sudoers.d/eventvox-pi >/dev/null
+chmod 0440 /etc/sudoers.d/zz-eventvox-pi
+visudo -cf /etc/sudoers.d/zz-eventvox-pi >/dev/null
 
 # NFC-lezers zonder toetsenbord-modus (PC/SC, zoals de ACS ACR122U): de kiosk-gebruiker mag ze lezen, ook zonder
 # ingelogde sessie (de agent leest het nummer en typt het in de scanterminal)
