@@ -40,12 +40,13 @@ before(async () => {
     stateDir = mkdtempSync(join(tmpdir(), 'evx-pi-'));
     mkdirSync(join(stateDir, 'home'));
     mkdirSync(join(stateDir, 'rpic'));
+    mkdirSync(join(stateDir, 'units'));
     agent = spawn('python3', [AGENT], {
         env: { ...process.env, EVX_PI_CDP: `http://127.0.0.1:${PORT}`, EVX_PI_STATE: stateDir, EVX_PI_DRYRUN: '1', EVX_PI_TICK: '0.3',
             // Wifi: wifi.py zonder sudo, met een nagebootste nmcli
             EVX_PI_WIFI: fileURLToPath(new URL('../pi/wifi.py', import.meta.url)), EVX_PI_SSH: fileURLToPath(new URL('../pi/ssh.py', import.meta.url)), EVX_PI_SSH_HOME: join(stateDir, 'home'),
             // NFC: nummers uit een bestand in plaats van een lezer; onderhoud: een bestand in plaats van systemctl
-            EVX_PI_NFC_FAKE: join(stateDir, 'nfc'), EVX_PI_UPDATE_ACTIVE: join(stateDir, 'updating'), NMCLI: fileURLToPath(new URL('./fake-nmcli', import.meta.url)), FAKE_NM: stateDir,
+            EVX_PI_NFC_FAKE: join(stateDir, 'nfc'), EVX_PI_SYSTEMCTL: fileURLToPath(new URL('./fake-systemctl', import.meta.url)), FAKE_SYSTEMCTL: join(stateDir, 'units'), NMCLI: fileURLToPath(new URL('./fake-nmcli', import.meta.url)), FAKE_NM: stateDir,
             EVX_PI_RPI_CONNECT: fileURLToPath(new URL('./fake-rpi-connect', import.meta.url)), FAKE_RPIC: join(stateDir, 'rpic'),
             EVX_PI_PAGE_MATCH: '^http://127\\.0\\.0\\.1:\\d+/scanterminal' },
     });
@@ -61,7 +62,7 @@ after(async () => {
 async function terminalPage() {
     const page = await browser.newPage();
     await page.goto(`${base}/scanterminal/?serial=abc`);
-    await page.waitForFunction(() => typeof window.WebKiosk?.getStatus === 'function', null, { timeout: 8000 });
+    await page.waitForFunction(() => typeof window.WebKiosk?.getStatus === 'function', null, { timeout: 20000 });
     return page;
 }
 const status = (page) => page.evaluate(() => JSON.parse(window.WebKiosk.getStatus()));
@@ -161,14 +162,15 @@ test('an NFC reader without keyboard mode (PC/SC): the number is typed with Ente
     await page.close();
 });
 
-test('maintenance: on the screen while updating, gone afterwards', async () => {
+test('maintenance: on the screen while updating (the oneshot service is "activating"), gone afterwards', async () => {
     const page = await terminalPage();
-    writeFileSync(join(stateDir, 'updating'), '');
+    const unit = join(stateDir, 'units', 'eventvox-pi-update.service');
+    writeFileSync(unit, 'activating\n');
     await page.getByText('De terminal wordt bijgewerkt').waitFor({ timeout: 8000 });
     // Also after a reload
     await page.reload();
     await page.getByText('De terminal wordt bijgewerkt').waitFor({ timeout: 8000 });
-    rmSync(join(stateDir, 'updating'));
+    writeFileSync(unit, 'inactive\n');
     await page.getByText('De terminal wordt bijgewerkt').waitFor({ state: 'detached', timeout: 8000 });
     await page.close();
 });

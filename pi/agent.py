@@ -35,10 +35,12 @@ STATE_DIR = os.environ.get('EVX_PI_STATE', '/var/lib/eventvox-pi')
 CDP = os.environ.get('EVX_PI_CDP', 'http://127.0.0.1:9222')
 DRYRUN = os.environ.get('EVX_PI_DRYRUN') == '1'
 TICK = float(os.environ.get('EVX_PI_TICK', '5'))
-# Tests: een bestand waarin regels met NFC-nummers verschijnen (in plaats van een echte lezer), en een bestand dat
-# bestaat zolang het bijwerken loopt (in plaats van systemctl)
+# Tests: een bestand waarin regels met NFC-nummers verschijnen (in plaats van een echte lezer), en een nagebootst
+# systemctl (of het bijwerken loopt)
 NFC_FAKE = os.environ.get('EVX_PI_NFC_FAKE')
-UPDATE_FAKE = os.environ.get('EVX_PI_UPDATE_ACTIVE')
+SYSTEMCTL = os.environ.get('EVX_PI_SYSTEMCTL') or 'systemctl'
+# Zo lang loopt het bijwerken: een eenmalige dienst (Type=oneshot) is "activating" zolang hij bezig is, niet "active"
+UPDATE_BUSY = {'active', 'activating', 'reloading', 'deactivating'}
 # Raspberry Pi Connect (als de kiosk-gebruiker, geen root nodig). Tests: EVX_PI_RPI_CONNECT = een nagebootst rpi-connect
 RPI_CONNECT = os.environ.get('EVX_PI_RPI_CONNECT') or 'rpi-connect'
 CONNECT_VERIFY = re.compile(r'https://connect\.raspberrypi\.com/verify/[A-Za-z0-9-]+')
@@ -782,10 +784,11 @@ class Agent:
                 pass
 
     def update_running(self):
-        if UPDATE_FAKE:
-            return os.path.exists(UPDATE_FAKE)
+        """Of eventvox-pi-update.service bezig is. Niet de afsluitcode van is-active: die is alleen 0 bij "active", en een
+        eenmalige dienst is tijdens het bijwerken "activating" (daardoor stond er tot v0.0.12 nooit Onderhoud)."""
         try:
-            return subprocess.run(['systemctl', 'is-active', '--quiet', 'eventvox-pi-update.service'], timeout=5).returncode == 0
+            out = subprocess.run([SYSTEMCTL, 'is-active', 'eventvox-pi-update.service'], capture_output=True, text=True, timeout=5)
+            return out.stdout.strip() in UPDATE_BUSY
         except (OSError, subprocess.SubprocessError):
             return False
 
