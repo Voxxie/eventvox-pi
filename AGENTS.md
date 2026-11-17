@@ -40,7 +40,7 @@ zijn **Nederlands**. Handleiding: `docs/` (werk die bij bij elke zichtbare wijzi
 | `pi/cleanup.sh` | Wekelijks opruimen als root (`eventvox-pi-cleanup.timer`); raakt nooit de opstart, instellingen of het Chromium-profiel (behalve crashrapporten) |
 | `pi/wifi.py` | Wifi-netwerken uit EventVOX zetten (als root, nmcli) |
 | `pi/ssh.py` | SSH-sleutels uit EventVOX in authorized_keys (als root) |
-| `image/` | Het SD-kaart-image (`build.sh`: officieel Raspberry Pi OS Lite 64-bit + pakketten + `/opt/eventvox-pi-kit`; `firstboot.sh`: wacht op gebruiker uit Imager, `install.sh --firstboot`, herstart; `manifest.py`: beschrijving voor Imager met `init_format` van het basis-image). Workflow `image.yml` (arm64-runner). |
+| `image/` | Het SD-kaart-image (`qemu-test.sh`: opstarttest in een nagebootste Pi 3B, in `image.yml` vóór het uploaden; `build.sh`: officieel Raspberry Pi OS Lite 64-bit + pakketten + `/opt/eventvox-pi-kit`; `firstboot.sh`: wacht op gebruiker uit Imager, `install.sh --firstboot`, herstart; `manifest.py`: beschrijving voor Imager met `init_format` van het basis-image). Workflow `image.yml` (arm64-runner). |
 | `tests/` | `run.sh`: shellcheck, `update.test.sh`, `wifi.test.sh`, `ssh.test.sh`, `cleanup.test.sh`, `firstboot.test.sh`, `install-connect.test.sh`, `splash.test.sh`, `agent.test.mjs` |
 
 ## Testen

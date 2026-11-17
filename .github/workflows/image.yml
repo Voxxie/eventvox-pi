@@ -16,7 +16,7 @@ permissions:
 jobs:
   image:
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 90
+    timeout-minutes: 150
     if: github.event_name != 'release' || github.event.release.tag_name != 'beta'
     steps:
       - uses: actions/checkout@v4
@@ -40,7 +40,7 @@ jobs:
       - name: Gereedschap
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq parted e2fsprogs xz-utils zerofree jq curl
+          sudo apt-get install -y -qq parted e2fsprogs xz-utils zerofree jq curl qemu-system-arm mtools openssl
 
       - name: Basis-image opzoeken (officiële lijst van Raspberry Pi Imager)
         id: base
@@ -53,6 +53,23 @@ jobs:
 
       - name: Image bouwen
         run: sudo image/build.sh "${{ steps.base.outputs.url }}" "${{ steps.version.outputs.name }}" dist
+
+      # Een image dat niet opstart of waarvan de eerste inrichting vastloopt, komt niet bij de release
+      - name: Opstarttest in een nagebootste Pi 3B (QEMU)
+        # Voorlopig: een mislukte test houdt het image nog niet tegen, tot de test zelf op GitHub bewezen is
+        continue-on-error: true
+        run: |
+          sudo chown -R "$USER" dist
+          image/qemu-test.sh "dist/eventvox-pi-${{ steps.version.outputs.name }}.img.xz" "$RUNNER_TEMP/qemu-test"
+
+      - name: Logboek van de opstarttest bewaren
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opstarttest-${{ steps.version.outputs.name }}
+          path: |
+            ${{ runner.temp }}/qemu-test/*.log
+          retention-days: 7
 
       - name: Beschrijving voor Imager
         env:
