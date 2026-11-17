@@ -70,6 +70,8 @@ if m:
 PY
 }
 
+# Zonder het watchdog-stuurprogramma: in QEMU blijft het uitzetten ervan hangen, en een watchdog die aan blijft reset de
+# nagebootste Pi na een halve minuut hard (dan gaat wat hij schreef verloren). Op een echte Pi doet hij gewoon mee.
 boot() {  # logbestand, seconden; de cmdline zoals de firmware hem leest, met de console op de seriële poort van QEMU
   local cmd
   cmd="$(mtype -i "$BOOT" ::/cmdline.txt | tr -d '\r\n' | sed 's/console=serial0,115200/console=ttyAMA1,115200/; s/console=tty1//')"
@@ -77,7 +79,7 @@ boot() {  # logbestand, seconden; de cmdline zoals de firmware hem leest, met de
   echo "    cmdline: $cmd"
   timeout "$2" qemu-system-aarch64 -M raspi3b -m 1G -smp 4 -kernel "$WORK/kernel8.img" -dtb "$WORK/bcm2710-rpi-3-b.dtb" \
     -initrd "$WORK/initramfs8" -no-reboot -drive "file=$WORK/sd.img,format=raw,if=sd" \
-    -append "$cmd watchdog_disarm=0 dwc_otg.fiq_fsm_enable=0" -display none -serial "file:$1" -serial null \
+    -append "$cmd initcall_blacklist=bcm2835_wdt_driver_init dwc_otg.fiq_fsm_enable=0" -display none -serial "file:$1" -serial null \
     -usb -device usb-net,netdev=n0 -netdev user,id=n0 >/dev/null 2>&1
 }
 
