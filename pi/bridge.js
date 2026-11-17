@@ -53,6 +53,11 @@
             var st = state.status || {};
             return JSON.stringify(st.wifi && st.uplink !== 'ethernet' ? st.wifi : null);
         },
+        /** Waarover de Pi internet heeft en de netwerkkabel: via de kabel toont de scanterminal een kabel-icoon */
+        getNetwork: function () {
+            var st = state.status || {};
+            return JSON.stringify({ uplink: st.uplink || null, ethernet: st.ethernet || null });
+        },
         requestDiagnostics: function () { send({ type: 'diagnostics' }); },
         command: function (json) { send({ type: 'command', value: String(json) }); },
         applySettings: function (json) { send({ type: 'settings', value: String(json) }); },

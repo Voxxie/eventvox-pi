@@ -76,6 +76,10 @@ test('window.WebKiosk on the scanterminal with the Pi\'s state; not on another p
     assert.equal(typeof s.pi, 'object');
     assert.equal(s.wifi_version, '', 'wifi_version (empty) tells EventVOX this version takes wifi networks');
     assert.equal(await page.evaluate(() => window.WebKiosk.nfcAvailable()), false);
+    // getNetwork: uplink and cable as in the status (the scanterminal shows a cable icon on the cable)
+    const net = JSON.parse(await page.evaluate(() => window.WebKiosk.getNetwork()));
+    assert.deepEqual(Object.keys(net).sort(), ['ethernet', 'uplink']);
+    assert.equal(net.uplink, s.uplink ?? null);
     // Rust sinds de laatste toets (voor 's nachts herladen)
     await page.keyboard.press('a');
     assert.ok(await page.evaluate(() => window.__evxPiIdleSeconds()) < 2);
