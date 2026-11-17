@@ -7,7 +7,7 @@
 #    draait en herstart (QEMU stopt bij elke herstart; hoogstens 5 starts).
 # 3. Controle op de kaart (debugfs, geen root nodig): het logboek van de eerste start eindigt met "klaar", de dienst
 #    staat uit, EventVOX-Pi staat in /opt/eventvox-pi.
-# 4. Nog een start: Linux komt tot het inlogscherm op de seriële console.
+# 4. Nog een start: Linux komt tot multi-user (daar start de kiosk; de seriële console heeft geen inlogregel).
 # Wat QEMU niet kan nabootsen (scherm, wifi, HDMI, Chromium op het scherm) test dit niet.
 # Nodig: qemu-system-aarch64 (raspi3b), mtools, e2fsprogs (debugfs), openssl, python3.
 set -uo pipefail
@@ -74,7 +74,8 @@ PY
 # nagebootste Pi na een halve minuut hard (dan gaat wat hij schreef verloren). Op een echte Pi doet hij gewoon mee.
 boot() {  # logbestand, seconden; de cmdline zoals de firmware hem leest, met de console op de seriële poort van QEMU
   local cmd
-  cmd="$(mtype -i "$BOOT" ::/cmdline.txt | tr -d '\r\n' | sed 's/console=serial0,115200/console=ttyAMA1,115200/; s/console=tty1//')"
+  # Zonder quiet: de meldingen van systemd (Reached target ...) zijn wat de test leest
+  cmd="$(mtype -i "$BOOT" ::/cmdline.txt | tr -d '\r\n' | sed 's/console=serial0,115200/console=ttyAMA1,115200/; s/console=tty1//; s/ quiet//; s/ loglevel=1//')"
   sync_disk_id "$cmd"
   echo "    cmdline: $cmd"
   : > "$1"
@@ -128,16 +129,16 @@ debugfs -R "stat /etc/systemd/system/multi-user.target.wants/eventvox-pi-firstbo
 [ -n "$(fsfile /opt/eventvox-pi/VERSION)" ] || fail "geen /opt/eventvox-pi/VERSION"
 echo "ok   eerste inrichting klaar na $n starts: EventVOX-Pi $(fsfile /opt/eventvox-pi/VERSION)"
 
-echo "==> Start na de inrichting (hoogstens $SECOND_S s): tot het inlogscherm"
+echo "==> Start na de inrichting (hoogstens $SECOND_S s): tot multi-user (waar de kiosk start)"
 ( boot "$WORK/after.log" "$SECOND_S" ) &
 QPID=$!
 end=$(( $(date +%s) + SECOND_S ))
 sleep 5
 while [ "$(date +%s)" -lt "$end" ] && kill -0 "$QPID" 2>/dev/null; do
-  grep -aq "login:" "$WORK/after.log" 2>/dev/null && break
+  grep -aq "Reached target.*Multi-User System" "$WORK/after.log" 2>/dev/null && break
   sleep 5
 done
 pkill -f "file:$WORK/after.log" 2>/dev/null; wait "$QPID" 2>/dev/null
-grep -aq "login:" "$WORK/after.log" || { tail -n 40 "$WORK/after.log"; fail "de start na de inrichting kwam niet tot het inlogscherm"; }
-echo "ok   start na de inrichting: Linux tot het inlogscherm"
+grep -aq "Reached target.*Multi-User System" "$WORK/after.log" || { tail -n 40 "$WORK/after.log"; fail "de start na de inrichting kwam niet tot multi-user"; }
+echo "ok   start na de inrichting: Linux tot multi-user, EventVOX-Pi-diensten gestart"
 echo "Opstarttest geslaagd"
