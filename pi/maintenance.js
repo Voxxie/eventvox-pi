@@ -4,13 +4,18 @@
 // "Eerste zin. Rest" wordt een kop en een regel eronder, netjes over de regels verdeeld.
 (function () {
     if (window.__evxMaintenance) return;
-    var LOGO = '<svg viewBox="0 0 186 176" aria-hidden="true">'
-        + '<defs><linearGradient id="evx-m-o" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5a00"/>'
-        + '<stop offset="1" stop-color="#ffaa00"/></linearGradient>'
-        + '<linearGradient id="evx-m-p" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d4002e"/>'
-        + '<stop offset="1" stop-color="#ff1a6e"/></linearGradient></defs>'
-        + '<polygon points="47,3 4,115 94,172 154,132" fill="url(#evx-m-o)"/>'
-        + '<polygon points="141,3 100,53 162,125 182,112" fill="url(#evx-m-p)"/></svg>';
+    // Het echte EventVOX-logo (SVG van EventVOX), met eigen id's voor de verlopen
+    var LOGO = '<svg viewBox="0 0 400 377" aria-hidden="true" style="fill-rule:evenodd;clip-rule:evenodd">'
+        + '<defs><linearGradient id="evx-m-l1" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" '
+        + 'gradientTransform="matrix(326.533,0,0,326.533,0.49998,189.373)"><stop offset="0" stop-color="rgb(255,83,0)"/>'
+        + '<stop offset="1" stop-color="rgb(248,176,3)"/></linearGradient>'
+        + '<linearGradient id="evx-m-l2" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" '
+        + 'gradientTransform="matrix(183.89,0,0,183.89,206.732,135.827)"><stop offset="0" stop-color="rgb(204,0,23)"/>'
+        + '<stop offset="1" stop-color="rgb(255,0,102)"/></linearGradient></defs>'
+        + '<g transform="translate(4.4395,0)">'
+        + '<path d="M327.033,290.623L194.701,376.298L0.5,247.785L95.023,2.446L327.033,290.623Z" fill="url(#evx-m-l1)"/>'
+        + '<path d="M390.621,241.953L292.661,0.498L206.732,107.592L342.501,271.157L390.621,241.953Z" fill="url(#evx-m-l2)"/>'
+        + '</g></svg>';
     var CSS = '[data-evx-maintenance]{position:fixed;left:0;top:0;right:0;bottom:0;z-index:2147483646;display:flex;'
         + 'flex-direction:column;align-items:center;justify-content:center;background:#12101a;color:#fff;'
         + 'font-family:"Liberation Sans",Arial,sans-serif;text-align:center;padding:6vmin;box-sizing:border-box;cursor:none}'
