@@ -4,6 +4,8 @@
 # bezig is, is "activating".
 if [ "$1" = is-active ]; then
   shift
+  # Zoals een drukke Pi tijdens het bijwerken: geen antwoord
+  [ -e "${FAKE_SYSTEMCTL:?}/fail" ] && exit 1
   code=3
   for unit in "$@"; do
     state="$(cat "${FAKE_SYSTEMCTL:?}/$unit" 2>/dev/null || echo inactive)"

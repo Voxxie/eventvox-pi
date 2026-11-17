@@ -179,6 +179,21 @@ test('maintenance: on the screen while updating (the oneshot service is "activat
     // Also after a reload
     await page.reload();
     await page.getByText('De terminal wordt bijgewerkt').waitFor({ timeout: 8000 });
+    // systemctl does not answer (a busy Pi), or says "not running" once or twice: the screen stays (never gone in between)
+    await page.evaluate(() => {
+        window.__gone = false;
+        new MutationObserver((list) => list.forEach((m) => m.removedNodes.forEach((n) => {
+            if (n.nodeType === 1 && n.hasAttribute('data-evx-maintenance')) window.__gone = true;
+        }))).observe(document.documentElement, { childList: true });
+    });
+    writeFileSync(join(stateDir, 'units', 'fail'), '');
+    await wait(1500);
+    rmSync(join(stateDir, 'units', 'fail'));
+    writeFileSync(unit, 'inactive\n');
+    await wait(350);
+    writeFileSync(unit, 'activating\n');
+    await wait(1000);
+    assert.equal(await page.evaluate(() => window.__gone), false, 'maintenance flickered away');
     writeFileSync(unit, 'inactive\n');
     await page.getByText('De terminal wordt bijgewerkt').waitFor({ state: 'detached', timeout: 8000 });
     // Only EventVOX-Pi: its own service, the same screen

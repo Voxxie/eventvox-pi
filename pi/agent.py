@@ -818,19 +818,31 @@ class Agent:
         eenmalige dienst is tijdens het bijwerken "activating" (daardoor stond er tot v0.0.12 nooit Onderhoud)."""
         try:
             out = subprocess.run([SYSTEMCTL, 'is-active', 'eventvox-pi-update.service', 'eventvox-pi-update-app.service'],
-                                 capture_output=True, text=True, timeout=5)
-            return any(line.strip() in UPDATE_BUSY for line in out.stdout.splitlines())
+                                 capture_output=True, text=True, timeout=10)
         except (OSError, subprocess.SubprocessError):
-            return False
+            return None  # weet niet (de Pi heeft het druk met bijwerken): niets veranderen
+        states = [line.strip() for line in out.stdout.splitlines() if line.strip()]
+        if not states:
+            return None
+        return any(state in UPDATE_BUSY for state in states)
 
     def check_maintenance(self):
+        """Onderhoud op het scherm zolang het bijwerken loopt. Pas weg na drie keer achter elkaar "loopt niet": tijdens het
+        bijwerken antwoordt systemctl soms traag of niet, en dan ging het scherm even weg en weer terug."""
         running = self.update_running()
-        if running and self.maintenance != MAINTENANCE_UPDATE:
-            self.log.add('Onderhoud: bijwerken loopt')
-            self.show_maintenance(MAINTENANCE_UPDATE)
-        elif not running and self.maintenance == MAINTENANCE_UPDATE:
-            self.log.add('Onderhoud klaar')
-            self.show_maintenance(None)
+        if running is None:
+            return
+        if running:
+            self.maintenance_idle = 0
+            if self.maintenance != MAINTENANCE_UPDATE:
+                self.log.add('Onderhoud: bijwerken loopt')
+                self.show_maintenance(MAINTENANCE_UPDATE)
+        elif self.maintenance == MAINTENANCE_UPDATE:
+            self.maintenance_idle = getattr(self, 'maintenance_idle', 0) + 1
+            if self.maintenance_idle >= 3:
+                self.maintenance_idle = 0
+                self.log.add('Onderhoud klaar')
+                self.show_maintenance(None)
 
     # --- NFC-lezers zonder toetsenbord-modus (PC/SC, bijvoorbeeld de ACS ACR122U) ---
 
