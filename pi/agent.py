@@ -494,6 +494,10 @@ class Agent:
             self.state['last_command_id'] = cid  # eerst opslaan: herstarten en bijwerken stoppen de agent
             self.save()
         self.log.add('Opdracht uit EventVOX: ' + name)
+        if name in ('update', 'update_app'):
+            # Meteen op het scherm, niet pas als de volgende ronde ziet dat het bijwerken loopt (scheelde seconden)
+            self.log.add('Onderhoud: bijwerken loopt')
+            self.show_maintenance(MAINTENANCE_UPDATE)
         self.push(True)  # command_done meteen terug, ook als de opdracht de pagina of de Pi herstart
         time.sleep(1)
         if name == 'reload':
@@ -504,13 +508,15 @@ class Agent:
             self.show_maintenance(MAINTENANCE_REBOOT)
             self.root('reboot')
         elif name == 'update':
-            self.root('update')
+            if not self.root('update'):
+                self.show_maintenance(None)  # niet gestart: geen onderhoud op het scherm laten staan
         elif name == 'update_app':
             # Een Pi met een oudere root-helper of oudere sudo-regels (half bijgewerkt) kent update-app niet: dan alles
             # bijwerken, dat herstelt die ook
             if not self.root('update-app'):
                 self.log.add('EventVOX-Pi bijwerken kan hier nog niet (oudere rechten): in plaats daarvan alles bijwerken')
-                self.root('update')
+                if not self.root('update'):
+                    self.show_maintenance(None)
         elif name == 'locate':
             self.locate()
         elif name == 'refresh_screen':

@@ -105,6 +105,8 @@ test('a command runs once per id and is reported done; reboot and update (dry ru
     await until(async () => (await status(page)).command_done === 8);
     // Only EventVOX-Pi (no Linux, no reboot of the Pi): its own root action
     await page.evaluate(() => window.WebKiosk.command(JSON.stringify({ id: 9, command: 'update_app' })));
+    // Maintenance at once with the command, not only when the next round sees the update running
+    await page.getByText('De terminal wordt bijgewerkt').waitFor({ timeout: 700 });
     await wait(1500);
     assert.deepEqual(readFileSync(join(stateDir, 'dryrun-actions'), 'utf8').trim().split('\n'), ['reboot', 'update', 'update-app']);
     // A half-updated Pi whose root helper does not know update-app yet: then everything (that repairs it)
