@@ -10,8 +10,9 @@ Python. Het logo (pi/logo.tga, 24-bit, ongecomprimeerd) wordt één keer per sch
 
 Met --progress (eventvox-pi-splash-progress.service, los van het logo zodat het de opstart nooit ophoudt): een
 voortgangsbalk onder het logo tot de kiosk (labwc) het scherm overneemt. Hoe lang het opstarten duurt weet Linux niet;
-de Pi onthoudt daarom hoe lang het de vorige keer duurde (boot-seconds in de cache) en vult de balk in die tijd, tot
-hoogstens 95%; zodra labwc draait is hij vol en wordt de nieuwe duur bewaard.
+de Pi onthoudt daarom hoe lang het de vorige keer duurde (boot-seconds in de cache) en vult de balk in die tijd. Weet hij
+het niet (de eerste keer), of duurt het langer dan verwacht, dan schuift er een blokje heen en weer: hij is nog bezig.
+Zodra labwc draait is de balk vol en wordt de nieuwe duur bewaard.
 
 Omgeving (tests): EVX_PI_PROC (in plaats van /proc), EVX_PI_PROGRESS_TICK (seconden), EVX_PI_LOGO, EVX_PI_FB (de framebuffer, in tests een bestand), EVX_PI_FB_SYSFS (map met virtual_size,
 bits_per_pixel en stride), EVX_PI_SPLASH_CACHE, EVX_PI_TTY (de console; leeg: niet aanraken), EVX_PI_FB_WAIT (seconden).
@@ -29,9 +30,9 @@ CACHE = os.environ.get('EVX_PI_SPLASH_CACHE') or '/var/cache/eventvox-pi'
 TTY = os.environ.get('EVX_PI_TTY', '/dev/tty1')
 WAIT = float(os.environ.get('EVX_PI_FB_WAIT', '5'))
 PROC = os.environ.get('EVX_PI_PROC') or '/proc'
-TICK = float(os.environ.get('EVX_PI_PROGRESS_TICK', '0.25'))
+TICK = float(os.environ.get('EVX_PI_PROGRESS_TICK', '0.1'))
 PROGRESS_MAX_S = 180          # daarna stoppen, ook als de kiosk niet komt
-DEFAULT_BOOT_S = 25.0         # de eerste keer (nog niets gemeten): ongeveer een Pi 3
+ANIM_PERIOD_S = 1.6           # een blokje heen en weer (als de duur onbekend is of al voorbij)
 BAR_FILL = (0xff, 0x6a, 0x00)  # oranje van EventVOX
 BAR_TRACK = (0x3a, 0x34, 0x44)
 
@@ -180,13 +181,20 @@ def bar_geometry(fb, logo):
     return (w - bw) // 2, y, bw, bh
 
 
-def draw_bar(fb, geometry, fraction):
+def draw_bar(fb, geometry, fraction, moving=None):
+    """De balk tot fraction gevuld; of, met moving (0..1, de plaats), een blokje van een kwart dat heen en weer gaat"""
     w, h, bpp, stride = fb
     x, y, bw, bh = geometry
     conv = pixel_format(bpp)
     size = bpp // 8
-    filled = max(0, min(bw, int(bw * fraction)))
-    line = conv(*BAR_FILL) * filled + conv(*BAR_TRACK) * (bw - filled)
+    fill, track = conv(*BAR_FILL), conv(*BAR_TRACK)
+    if moving is None:
+        filled = max(0, min(bw, int(bw * fraction)))
+        line = fill * filled + track * (bw - filled)
+    else:
+        seg = max(1, bw // 4)
+        start = int((bw - seg) * max(0.0, min(1.0, moving)))
+        line = track * start + fill * seg + track * (bw - seg - start)
     with open(FB, 'r+b') as f:
         for row in range(y, y + bh):
             f.seek(row * stride + x * size)
@@ -218,7 +226,7 @@ def progress():
         with open(stamp) as f:
             expected = max(5.0, min(PROGRESS_MAX_S, float(f.read().strip())))
     except (OSError, ValueError):
-        expected = DEFAULT_BOOT_S
+        expected = None  # nog nooit gemeten: alleen de animatie
     try:
         fb = fb_info()
         geometry = bar_geometry(fb, logo_size())
@@ -244,7 +252,13 @@ def progress():
                 pass
             return 0
         try:
-            draw_bar(fb, geometry, min(0.95, uptime() / expected))
+            now = uptime()
+            if expected is not None and now < expected * 0.97:
+                draw_bar(fb, geometry, now / expected)
+            else:
+                # Onbekend of al langer dan de vorige keer: heen en weer (driehoeksgolf), zodat je ziet dat hij bezig is
+                phase = (time.monotonic() % ANIM_PERIOD_S) / ANIM_PERIOD_S
+                draw_bar(fb, geometry, 0, moving=1 - abs(2 * phase - 1))
         except (OSError, ValueError):
             return 0
         time.sleep(TICK)

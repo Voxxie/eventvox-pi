@@ -69,3 +69,30 @@ wait "$PID"
 [ "$(bar)" -ge 570 ] || fail "balk niet vol toen labwc er was: $(bar)"
 [ "$(cat "$T/cache/boot-seconds")" = "10.0" ] || fail "opstartduur niet bewaard: $(cat "$T/cache/boot-seconds")"
 echo "ok   voortgang: balk naar de vorige opstartduur ($half van 576), vol zodra de kiosk er is, nieuwe duur bewaard"
+
+# Nog nooit gemeten (of al langer dan de vorige keer): een blokje van een kwart dat heen en weer gaat
+rm -f "$T/cache/boot-seconds"; rm -rf "$T/proc/321"; run
+EVX_PI_FB="$T/fb" EVX_PI_FB_SYSFS="$T/sys" EVX_PI_SPLASH_CACHE="$T/cache" EVX_PI_PROC="$T/proc" EVX_PI_PROGRESS_TICK=0.05 \
+  python3 "$ROOT/pi/splash.py" --progress &
+PID=$!
+first() {  # x van de eerste oranje pixel in de balk, en het aantal
+  python3 - "$T/fb" <<'PY'
+import sys
+d = open(sys.argv[1], 'rb').read()
+stride = 7680
+orange = bytes((0x00, 0x6a, 0xff, 0))
+best = (0, -1)
+for y in range(1080):
+    xs = [x for x in range(1920) if d[y * stride + x * 4:y * stride + x * 4 + 4] == orange]
+    if len(xs) > best[0]:
+        best = (len(xs), xs[0])
+print(best[1], best[0])
+PY
+}
+sleep 0.5; read -r x1 n1 < <(first)
+sleep 0.3; read -r x2 n2 < <(first)
+mkdir -p "$T/proc/321"; echo labwc > "$T/proc/321/comm"; wait "$PID"
+[ "$n1" -ge 140 ] && [ "$n1" -le 150 ] || fail "animatie: blokje van $n1 pixels (verwacht 144, een kwart)"
+[ "$x1" != "$x2" ] || fail "animatie: het blokje beweegt niet ($x1)"
+[ -s "$T/cache/boot-seconds" ] || fail "duur niet bewaard na de eerste keer"
+echo "ok   onbekende duur: een blokje dat heen en weer gaat ($x1 -> $x2), daarna de duur bewaard"
