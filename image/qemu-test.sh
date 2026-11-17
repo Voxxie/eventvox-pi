@@ -53,9 +53,27 @@ users:
 UD
 mcopy -o -i "$BOOT" "$WORK/user-data" ::/user-data || fail "user-data schrijven"
 
+# Bij de eerste start geeft Raspberry Pi OS de kaart een nieuwe schijf-ID (cmdline.txt en fstab); in QEMU komt die niet
+# altijd in de nagebootste kaart terecht (op een echte Pi wel). Daarom vóór elke start de schijf-ID op de kaart gelijk
+# zetten aan root=PARTUUID in cmdline.txt, zoals op een echte kaart.
+sync_disk_id() {
+  python3 - "$WORK/sd.img" "$1" <<'PY'
+import re, struct, sys
+m = re.search(r'root=PARTUUID=([0-9a-f]{8})-02', sys.argv[2])
+if m:
+    with open(sys.argv[1], 'r+b') as f:
+        f.seek(440)
+        if f.read(4) != struct.pack('<I', int(m.group(1), 16)):
+            f.seek(440)
+            f.write(struct.pack('<I', int(m.group(1), 16)))
+            print('    schijf-ID gelijkgezet aan cmdline.txt:', m.group(1))
+PY
+}
+
 boot() {  # logbestand, seconden; de cmdline zoals de firmware hem leest, met de console op de seriële poort van QEMU
   local cmd
   cmd="$(mtype -i "$BOOT" ::/cmdline.txt | tr -d '\r\n' | sed 's/console=serial0,115200/console=ttyAMA1,115200/; s/console=tty1//')"
+  sync_disk_id "$cmd"
   echo "    cmdline: $cmd"
   timeout "$2" qemu-system-aarch64 -M raspi3b -m 1G -smp 4 -kernel "$WORK/kernel8.img" -dtb "$WORK/bcm2710-rpi-3-b.dtb" \
     -initrd "$WORK/initramfs8" -no-reboot -drive "file=$WORK/sd.img,format=raw,if=sd" \
