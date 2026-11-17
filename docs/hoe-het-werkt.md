@@ -43,6 +43,9 @@
   `cmdline.txt`): lukt het niet, dan is er gewoon geen logo. De eerste seconden na het aanzetten blijven zwart (de Pi
   en de kernel; dat kan alleen via de initramfs, en dat risico nemen we bewust niet). Het logo is `pi/logo.tga`
   (24-bit TGA, ongecomprimeerd); per schermformaat wordt het één keer omgezet en bewaard in `/var/cache/eventvox-pi`.
+  Onder het logo loopt een **voortgangsbalk** (`eventvox-pi-splash-progress.service`): de Pi onthoudt hoe lang het
+  opstarten de vorige keer duurde (`/var/cache/eventvox-pi/boot-seconds`) en vult de balk in die tijd, tot hoogstens 95%;
+  zodra de kiosk er is, is hij vol. De eerste keer rekent hij met 25 seconden.
 - NumLock aan in labwc (veel NFC-lezers en scanners typen hun cijfers op het numerieke toetsenblok)
 - Geen meldingen op het scherm, het scherm gaat nooit uit, geluid via HDMI (`kiosk.sh` kiest bij elke start
   de HDMI-geluidskaart van het aangesloten scherm)

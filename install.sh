@@ -173,6 +173,25 @@ TimeoutStopSec=10
 WantedBy=sysinit.target
 EOF
 
+# De voortgangsbalk onder het logo (splash.py --progress): een eigen dienst die niets ophoudt, tot de kiosk er is
+cat > /etc/systemd/system/eventvox-pi-splash-progress.service <<'EOF'
+[Unit]
+Description=EventVOX-Pi: voortgangsbalk onder het logo tijdens het opstarten
+DefaultDependencies=no
+After=eventvox-pi-splash.service
+Before=shutdown.target
+Conflicts=shutdown.target
+ConditionPathExists=/opt/eventvox-pi/logo.tga
+
+[Service]
+Type=simple
+ExecStart=-/usr/bin/python3 /opt/eventvox-pi/splash.py --progress
+TimeoutStopSec=3
+
+[Install]
+WantedBy=sysinit.target
+EOF
+
 # Wekelijks onderhoud (cleanup.sh): apt-downloads, oude pakketten, logboeken, crashdumps. Willekeurig moment in de nacht
 # van zondag op maandag, zodat niet alle Pi's tegelijk; een gemiste ronde (Pi stond uit) wordt bij de start ingehaald.
 cat > /etc/systemd/system/eventvox-pi-cleanup.service <<'EOF'
@@ -237,7 +256,7 @@ WantedBy=default.target
 EOF
 systemctl daemon-reload
 systemctl enable --now eventvox-pi-cleanup.timer >/dev/null 2>&1 || true
-systemctl enable eventvox-pi-splash.service >/dev/null 2>&1 || true
+systemctl enable eventvox-pi-splash.service eventvox-pi-splash-progress.service >/dev/null 2>&1 || true
 systemctl --global enable eventvox-pi-agent.service >/dev/null 2>&1 || true
 loginctl enable-linger "$KIOSK_USER"
 

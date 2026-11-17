@@ -43,3 +43,29 @@ echo "ok   800x480, 16 bits met een langere rij: logo en achtergrond"
 rm -rf "$T/sys"; out="$(EVX_PI_FB="$T/geen" EVX_PI_FB_SYSFS="$T/sys" EVX_PI_TTY= EVX_PI_FB_WAIT=0.3 python3 "$ROOT/pi/splash.py")"
 [ "$out" = "Geen framebuffer: geen logo" ] || fail "zonder framebuffer: $out"
 echo "ok   geen framebuffer: geen fout, geen logo"
+
+# Voortgang (--progress): een balk onder het logo, deels gevuld naar de vorige opstartduur; zodra labwc draait vol, en de
+# nieuwe duur bewaard
+fb 1920 1080 32 7680
+run
+mkdir -p "$T/proc" "$T/cache"; echo "10.0 20.0" > "$T/proc/uptime"; echo 20 > "$T/cache/boot-seconds"
+EVX_PI_FB="$T/fb" EVX_PI_FB_SYSFS="$T/sys" EVX_PI_SPLASH_CACHE="$T/cache" EVX_PI_PROC="$T/proc" EVX_PI_PROGRESS_TICK=0.05 \
+  python3 "$ROOT/pi/splash.py" --progress &
+PID=$!
+sleep 0.6
+bar() {  # aantal oranje pixels in de balk
+  python3 - "$T/fb" <<'PY'
+import sys
+d = open(sys.argv[1], 'rb').read()
+stride = 7680
+orange = bytes((0x00, 0x6a, 0xff, 0))
+print(max(sum(1 for x in range(1920) if d[y * stride + x * 4:y * stride + x * 4 + 4] == orange) for y in range(1080)))
+PY
+}
+half="$(bar)"
+[ "$half" -gt 200 ] && [ "$half" -lt 400 ] || fail "balk na 10 van 20 s: $half oranje pixels (verwacht ~288 van 576)"
+mkdir -p "$T/proc/321"; echo labwc > "$T/proc/321/comm"
+wait "$PID"
+[ "$(bar)" -ge 570 ] || fail "balk niet vol toen labwc er was: $(bar)"
+[ "$(cat "$T/cache/boot-seconds")" = "10.0" ] || fail "opstartduur niet bewaard: $(cat "$T/cache/boot-seconds")"
+echo "ok   voortgang: balk naar de vorige opstartduur ($half van 576), vol zodra de kiosk er is, nieuwe duur bewaard"

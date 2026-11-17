@@ -35,7 +35,7 @@ zijn **Nederlands**. Handleiding: `docs/` (werk die bij bij elke zichtbare wijzi
 | `pi/agent.py` | De agent: Chrome DevTools Protocol (eigen kleine websocket, standaardbibliotheek van Python 3); leest ook NFC-lezers zonder toetsenbord-modus (PC/SC, pyscard) en typt het nummer als toetsaanslagen + Enter (de scanterminal leest `keydown`) |
 | `pi/bridge.js` / `pi/locate.js` / `pi/maintenance.js` / `pi/refresh.js` | `window.WebKiosk` in de scanterminal / Zoek mij / Onderhoud op het scherm (tijdens bijwerken en voor herstarten) / Scherm opfrissen |
 | `pi/kiosk.sh` | Chromium-lus (labwc autostart) |
-| `pi/splash.py` / `pi/logo.tga` | Het logo bij opstarten en afsluiten, rechtstreeks op de framebuffer (`eventvox-pi-splash.service`). Nooit via de initramfs, `config.txt` of `cmdline.txt` (0.0.6 tot 0.0.9 startten daardoor niet) |
+| `pi/splash.py` / `pi/logo.tga` | Het logo bij opstarten en afsluiten, rechtstreeks op de framebuffer (`eventvox-pi-splash.service`), met een voortgangsbalk naar de vorige opstartduur (`--progress`, eigen dienst die niets ophoudt). Nooit via de initramfs, `config.txt` of `cmdline.txt` (0.0.6 tot 0.0.9 startten daardoor niet) |
 | `pi/update.sh` | Bijwerken: pakket (SHA-256) en apt; herstart alleen als er iets nieuws was |
 | `pi/cleanup.sh` | Wekelijks opruimen als root (`eventvox-pi-cleanup.timer`); raakt nooit de opstart, instellingen of het Chromium-profiel (behalve crashrapporten) |
 | `pi/wifi.py` | Wifi-netwerken uit EventVOX zetten (als root, nmcli) |

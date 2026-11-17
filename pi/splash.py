@@ -8,7 +8,12 @@ framebuffer (/dev/fb0) zodra Linux draait; lukt iets niet, dan is er gewoon geen
 Python. Het logo (pi/logo.tga, 24-bit, ongecomprimeerd) wordt één keer per schermformaat geschaald en omgezet en in
 /var/cache/eventvox-pi bewaard, zodat het daarna in een fractie van een seconde op het scherm staat.
 
-Omgeving (tests): EVX_PI_LOGO, EVX_PI_FB (de framebuffer, in tests een bestand), EVX_PI_FB_SYSFS (map met virtual_size,
+Met --progress (eventvox-pi-splash-progress.service, los van het logo zodat het de opstart nooit ophoudt): een
+voortgangsbalk onder het logo tot de kiosk (labwc) het scherm overneemt. Hoe lang het opstarten duurt weet Linux niet;
+de Pi onthoudt daarom hoe lang het de vorige keer duurde (boot-seconds in de cache) en vult de balk in die tijd, tot
+hoogstens 95%; zodra labwc draait is hij vol en wordt de nieuwe duur bewaard.
+
+Omgeving (tests): EVX_PI_PROC (in plaats van /proc), EVX_PI_PROGRESS_TICK (seconden), EVX_PI_LOGO, EVX_PI_FB (de framebuffer, in tests een bestand), EVX_PI_FB_SYSFS (map met virtual_size,
 bits_per_pixel en stride), EVX_PI_SPLASH_CACHE, EVX_PI_TTY (de console; leeg: niet aanraken), EVX_PI_FB_WAIT (seconden).
 """
 import hashlib
@@ -23,6 +28,12 @@ SYSFS = os.environ.get('EVX_PI_FB_SYSFS') or '/sys/class/graphics/fb0'
 CACHE = os.environ.get('EVX_PI_SPLASH_CACHE') or '/var/cache/eventvox-pi'
 TTY = os.environ.get('EVX_PI_TTY', '/dev/tty1')
 WAIT = float(os.environ.get('EVX_PI_FB_WAIT', '5'))
+PROC = os.environ.get('EVX_PI_PROC') or '/proc'
+TICK = float(os.environ.get('EVX_PI_PROGRESS_TICK', '0.25'))
+PROGRESS_MAX_S = 180          # daarna stoppen, ook als de kiosk niet komt
+DEFAULT_BOOT_S = 25.0         # de eerste keer (nog niets gemeten): ongeveer een Pi 3
+BAR_FILL = (0xff, 0x6a, 0x00)  # oranje van EventVOX
+BAR_TRACK = (0x3a, 0x34, 0x44)
 
 
 def read_tga(path):
@@ -150,7 +161,99 @@ def quiet_console():
             pass
 
 
+def logo_size():
+    with open(LOGO, 'rb') as f:
+        head = f.read(18)
+    return struct.unpack('<HH', head[12:16])
+
+
+def bar_geometry(fb, logo):
+    """(x, y, breedte, hoogte) van de balk: in het midden, net onder het logo"""
+    w, h = fb[0], fb[1]
+    lw, lh = logo
+    scale = min(w / lw, h / lh)
+    sh = int(lh * scale)
+    y0 = (h - sh) // 2
+    bw = max(40, int(w * 0.30))
+    bh = max(3, h // 150)
+    y = min(h - bh - 1, y0 + int(sh * 0.86))
+    return (w - bw) // 2, y, bw, bh
+
+
+def draw_bar(fb, geometry, fraction):
+    w, h, bpp, stride = fb
+    x, y, bw, bh = geometry
+    conv = pixel_format(bpp)
+    size = bpp // 8
+    filled = max(0, min(bw, int(bw * fraction)))
+    line = conv(*BAR_FILL) * filled + conv(*BAR_TRACK) * (bw - filled)
+    with open(FB, 'r+b') as f:
+        for row in range(y, y + bh):
+            f.seek(row * stride + x * size)
+            f.write(line)
+
+
+def kiosk_running():
+    """Of labwc draait (dan heeft de kiosk het scherm)"""
+    try:
+        for pid in os.listdir(PROC):
+            if pid.isdigit():
+                try:
+                    with open(os.path.join(PROC, pid, 'comm')) as f:
+                        if f.read().strip() == 'labwc':
+                            return True
+                except OSError:
+                    pass
+    except OSError:
+        pass
+    return False
+
+
+def progress():
+    """De voortgangsbalk tot de kiosk er is; daarna de duur bewaren voor de volgende keer"""
+    if not os.path.exists(FB) or not os.path.exists(os.path.join(SYSFS, 'virtual_size')) or kiosk_running():
+        return 0
+    stamp = os.path.join(CACHE, 'boot-seconds')
+    try:
+        with open(stamp) as f:
+            expected = max(5.0, min(PROGRESS_MAX_S, float(f.read().strip())))
+    except (OSError, ValueError):
+        expected = DEFAULT_BOOT_S
+    try:
+        fb = fb_info()
+        geometry = bar_geometry(fb, logo_size())
+    except (OSError, ValueError) as e:
+        print(f'Voortgang tonen lukte niet: {e}')
+        return 0
+    # Gemeten vanaf het starten van Linux (uptime), niet vanaf nu: de Pi was al even bezig
+    def uptime():
+        try:
+            with open(os.path.join(PROC, 'uptime')) as f:
+                return float(f.read().split()[0])
+        except (OSError, ValueError, IndexError):
+            return time.monotonic()
+    start = time.monotonic()
+    while time.monotonic() - start < PROGRESS_MAX_S:
+        if kiosk_running():
+            try:
+                draw_bar(fb, geometry, 1.0)
+                os.makedirs(CACHE, exist_ok=True)
+                with open(stamp, 'w') as f:
+                    f.write(f'{uptime():.1f}\n')
+            except OSError:
+                pass
+            return 0
+        try:
+            draw_bar(fb, geometry, min(0.95, uptime() / expected))
+        except (OSError, ValueError):
+            return 0
+        time.sleep(TICK)
+    return 0
+
+
 def main():
+    if '--progress' in sys.argv[1:]:
+        return progress()
     deadline = time.time() + WAIT
     while not os.path.exists(FB) or not os.path.exists(os.path.join(SYSFS, 'virtual_size')):
         if time.time() > deadline:
