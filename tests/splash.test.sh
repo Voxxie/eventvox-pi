@@ -12,7 +12,7 @@ fb() {  # breedte hoogte bpp stride
   echo "$1,$2" > "$T/sys/virtual_size"; echo "$3" > "$T/sys/bits_per_pixel"; echo "$4" > "$T/sys/stride"
   head -c $(( $4 * $2 )) /dev/zero > "$T/fb"
 }
-run() { EVX_PI_FB="$T/fb" EVX_PI_FB_SYSFS="$T/sys" EVX_PI_SPLASH_CACHE="$T/cache" EVX_PI_TTY= EVX_PI_FB_WAIT=1 python3 "$ROOT/pi/splash.py"; }
+run() { EVX_PI_FB="$T/fb" EVX_PI_FB_SYSFS="$T/sys" EVX_PI_SPLASH_CACHE="$T/cache" EVX_PI_TTY='' EVX_PI_FB_WAIT=1 python3 "$ROOT/pi/splash.py"; }
 check() {  # bpp stride breedte hoogte
   python3 - "$T/fb" "$@" <<'PY'
 import sys
@@ -40,7 +40,7 @@ echo "ok   1920x1080, 32 bits: logo in het midden, rand in de achtergrondkleur (
 fb 800 480 16 1664
 run; check 16 1664 800 480 || fail "16 bits klopt niet"
 echo "ok   800x480, 16 bits met een langere rij: logo en achtergrond"
-rm -rf "$T/sys"; out="$(EVX_PI_FB="$T/geen" EVX_PI_FB_SYSFS="$T/sys" EVX_PI_TTY= EVX_PI_FB_WAIT=0.3 python3 "$ROOT/pi/splash.py")"
+rm -rf "$T/sys"; out="$(EVX_PI_FB="$T/geen" EVX_PI_FB_SYSFS="$T/sys" EVX_PI_TTY='' EVX_PI_FB_WAIT=0.3 python3 "$ROOT/pi/splash.py")"
 [ "$out" = "Geen framebuffer: geen logo" ] || fail "zonder framebuffer: $out"
 echo "ok   geen framebuffer: geen fout, geen logo"
 
@@ -90,7 +90,7 @@ print(best[1], best[0])
 PY
 }
 sleep 0.5; read -r x1 n1 < <(first)
-sleep 0.3; read -r x2 n2 < <(first)
+sleep 0.3; read -r x2 _ < <(first)
 mkdir -p "$T/proc/321"; echo labwc > "$T/proc/321/comm"; wait "$PID"
 [ "$n1" -ge 140 ] && [ "$n1" -le 150 ] || fail "animatie: blokje van $n1 pixels (verwacht 144, een kwart)"
 [ "$x1" != "$x2" ] || fail "animatie: het blokje beweegt niet ($x1)"
