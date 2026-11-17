@@ -80,6 +80,14 @@ fi
 
 # --- EventVOX-Pi zelf -----------------------------------------------------------------------------------------------------
 
+# Bijwerken betekent: de Pi is ingericht. Staat de eerste start van het image nog aan (bijvoorbeeld na de fout van 0.0.10
+# bij Raspberry Pi Connect), dan zou die bij elke opstart de oude versie uit het image terugzetten: uit, en het oude
+# pakket weg.
+if [ "$UPDATE" = 1 ] && [ -e /etc/systemd/system/eventvox-pi-firstboot.service ]; then
+  systemctl disable eventvox-pi-firstboot.service >/dev/null 2>&1 || true
+  rm -rf /opt/eventvox-pi-kit
+fi
+
 step "EventVOX-Pi $(cat pi/VERSION) installeren in $OPT"
 mkdir -p "$OPT" "$CONF_DIR" "$STATE"
 install -m 0755 pi/agent.py pi/kiosk.sh pi/update.sh pi/cleanup.sh pi/wifi.py pi/ssh.py "$OPT/"

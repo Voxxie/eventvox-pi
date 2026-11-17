@@ -53,6 +53,18 @@ done
 echo "instellingen uit Raspberry Pi Imager afronden" > "$NOW/step"
 sleep 5
 
+# Staat er al een nieuwere EventVOX-Pi (de Pi werkte zichzelf al bij), dan nooit de oudere uit het image terugzetten
+INSTALLED="$(cat "${EVX_FIRSTBOOT_INSTALLED:-/opt/eventvox-pi/VERSION_CODE}" 2>/dev/null || echo 0)"
+KIT_CODE="$(cat "$KIT/pi/VERSION_CODE" 2>/dev/null || echo 0)"
+if [[ "$INSTALLED" =~ ^[0-9]+$ ]] && [[ "$KIT_CODE" =~ ^[0-9]+$ ]] && [ "$INSTALLED" -gt "$KIT_CODE" ]; then
+  stop_ticker
+  echo "== al bijgewerkt ($INSTALLED, image $KIT_CODE): eerste start uit, niets teruggezet"
+  [ -z "${EVX_FIRSTBOOT_DRYRUN:-}" ] && systemctl disable eventvox-pi-firstboot.service
+  [ -z "${EVX_FIRSTBOOT_DRYRUN:-}" ] && rm -rf "$KIT"
+  rm -rf "$NOW"
+  exit 0
+fi
+
 # install.sh meldt elke stap als "==> tekst": die gaat naar het scherm, alles gaat naar het logboek
 bash "$KIT/install.sh" --firstboot 2>&1 | while IFS= read -r line; do
   printf '%s\n' "$line"
