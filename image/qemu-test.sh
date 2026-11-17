@@ -77,10 +77,23 @@ boot() {  # logbestand, seconden; de cmdline zoals de firmware hem leest, met de
   cmd="$(mtype -i "$BOOT" ::/cmdline.txt | tr -d '\r\n' | sed 's/console=serial0,115200/console=ttyAMA1,115200/; s/console=tty1//')"
   sync_disk_id "$cmd"
   echo "    cmdline: $cmd"
-  timeout "$2" qemu-system-aarch64 -M raspi3b -m 1G -smp 4 -kernel "$WORK/kernel8.img" -dtb "$WORK/bcm2710-rpi-3-b.dtb" \
+  : > "$1"
+  qemu-system-aarch64 -M raspi3b -m 1G -smp 4 -kernel "$WORK/kernel8.img" -dtb "$WORK/bcm2710-rpi-3-b.dtb" \
     -initrd "$WORK/initramfs8" -no-reboot -drive "file=$WORK/sd.img,format=raw,if=sd" \
     -append "$cmd initcall_blacklist=bcm2835_wdt_driver_init dwc_otg.fiq_fsm_enable=0" -display none -serial "file:$1" -serial null \
-    -usb -device usb-net,netdev=n0 -netdev user,id=n0 >/dev/null 2>&1
+    -usb -device usb-net,netdev=n0 -netdev user,id=n0 >/dev/null 2>&1 &
+  local qpid=$! end=$(( $(date +%s) + $2 ))
+  # Zonder watchdog kan de nagebootste Pi niet zelf herstarten: hij blijft staan na "reboot: Restarting system".
+  # Dat is het moment om QEMU te stoppen (alles is dan al netjes weggeschreven).
+  while kill -0 "$qpid" 2>/dev/null; do
+    if grep -aqE "reboot: (Restarting system|Power down)|System halted" "$1"; then
+      sleep 2; kill "$qpid" 2>/dev/null; wait "$qpid" 2>/dev/null; return 0
+    fi
+    if [ "$(date +%s)" -ge "$end" ]; then kill "$qpid" 2>/dev/null; wait "$qpid" 2>/dev/null; return 124; fi
+    sleep 3
+  done
+  wait "$qpid" 2>/dev/null
+  return 0
 }
 
 # Raspberry Pi OS herstart zelf na het vergroten van de kaart, en de eerste inrichting herstart als hij klaar is: QEMU
@@ -119,6 +132,7 @@ echo "==> Start na de inrichting (hoogstens $SECOND_S s): tot het inlogscherm"
 ( boot "$WORK/after.log" "$SECOND_S" ) &
 QPID=$!
 end=$(( $(date +%s) + SECOND_S ))
+sleep 5
 while [ "$(date +%s)" -lt "$end" ] && kill -0 "$QPID" 2>/dev/null; do
   grep -aq "login:" "$WORK/after.log" 2>/dev/null && break
   sleep 5
