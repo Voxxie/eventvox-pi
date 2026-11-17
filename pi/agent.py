@@ -506,7 +506,11 @@ class Agent:
         elif name == 'update':
             self.root('update')
         elif name == 'update_app':
-            self.root('update-app')
+            # Een Pi met een oudere root-helper of oudere sudo-regels (half bijgewerkt) kent update-app niet: dan alles
+            # bijwerken, dat herstelt die ook
+            if not self.root('update-app'):
+                self.log.add('EventVOX-Pi bijwerken kan hier nog niet (oudere rechten): in plaats daarvan alles bijwerken')
+                self.root('update')
         elif name == 'locate':
             self.locate()
         elif name == 'refresh_screen':
@@ -610,7 +614,8 @@ class Agent:
             self.log.add('Browser herstarten mislukt: ' + str(e))
 
     def root(self, action, stdin=None):
-        """Pi herstarten, bijwerken (alles of alleen EventVOX-Pi), wifi of SSH-sleutels zetten (als root, via sudo). stdin: invoer"""
+        """Pi herstarten, bijwerken (alles of alleen EventVOX-Pi), wifi of SSH-sleutels zetten (als root, via sudo). stdin: invoer.
+        Geeft True als het lukte."""
         if action not in ('wifi', 'ssh'):
             what = {'reboot': 'Pi herstarten', 'update': 'Alles bijwerken gestart', 'update-app': 'EventVOX-Pi bijwerken gestart'}.get(action, action)
             self.log.add(what + (' (proef, niet echt)' if DRYRUN else ''))
@@ -622,10 +627,19 @@ class Agent:
                 # Tests: wifi.py / ssh.py zonder sudo (EVX_PI_WIFI / EVX_PI_SSH = pad naar het script)
                 subprocess.run([sys.executable, script], input=stdin, capture_output=True, text=True,
                                env={**os.environ, 'EVX_PI_STATE': STATE_DIR})
-            return
-        r = subprocess.run(['sudo', '-n', ROOT_HELPER, action], input=stdin, capture_output=True, text=True, timeout=180)
+            # Tests: acties die "mislukken" staan in het bestand EVX_PI_ROOT_FAIL (bijvoorbeeld update-app op een half
+            # bijgewerkte Pi)
+            failing = read_text(os.environ['EVX_PI_ROOT_FAIL']).split() if os.environ.get('EVX_PI_ROOT_FAIL') else []
+            return action not in failing
+        try:
+            r = subprocess.run(['sudo', '-n', ROOT_HELPER, action], input=stdin, capture_output=True, text=True, timeout=180)
+        except (OSError, subprocess.SubprocessError) as e:
+            self.log.add(f'{action} mislukt: {e}'[:200])
+            return False
         if r.returncode != 0:
             self.log.add(f'{action} mislukt: ' + (r.stderr or r.stdout).strip()[:200])
+            return False
+        return True
 
     # --- Raspberry Pi Connect ---
 

@@ -47,6 +47,7 @@ before(async () => {
             EVX_PI_WIFI: fileURLToPath(new URL('../pi/wifi.py', import.meta.url)), EVX_PI_SSH: fileURLToPath(new URL('../pi/ssh.py', import.meta.url)), EVX_PI_SSH_HOME: join(stateDir, 'home'),
             // NFC: nummers uit een bestand in plaats van een lezer; onderhoud: een bestand in plaats van systemctl
             EVX_PI_NFC_FAKE: join(stateDir, 'nfc'), EVX_PI_SYSTEMCTL: fileURLToPath(new URL('./fake-systemctl', import.meta.url)), FAKE_SYSTEMCTL: join(stateDir, 'units'), NMCLI: fileURLToPath(new URL('./fake-nmcli', import.meta.url)), FAKE_NM: stateDir,
+            EVX_PI_ROOT_FAIL: join(stateDir, 'root-fail'),
             EVX_PI_RPI_CONNECT: fileURLToPath(new URL('./fake-rpi-connect', import.meta.url)), FAKE_RPIC: join(stateDir, 'rpic'),
             EVX_PI_PAGE_MATCH: '^http://127\\.0\\.0\\.1:\\d+/scanterminal' },
     });
@@ -106,6 +107,12 @@ test('a command runs once per id and is reported done; reboot and update (dry ru
     await page.evaluate(() => window.WebKiosk.command(JSON.stringify({ id: 9, command: 'update_app' })));
     await wait(1500);
     assert.deepEqual(readFileSync(join(stateDir, 'dryrun-actions'), 'utf8').trim().split('\n'), ['reboot', 'update', 'update-app']);
+    // A half-updated Pi whose root helper does not know update-app yet: then everything (that repairs it)
+    writeFileSync(join(stateDir, 'root-fail'), 'update-app\n');
+    await page.evaluate(() => window.WebKiosk.command(JSON.stringify({ id: 10, command: 'update_app' })));
+    await wait(1500);
+    assert.deepEqual(readFileSync(join(stateDir, 'dryrun-actions'), 'utf8').trim().split('\n'), ['reboot', 'update', 'update-app', 'update-app', 'update']);
+    rmSync(join(stateDir, 'root-fail'));
     // Settings: what a Pi uses; the rest (NFC, volume) is not for a Pi
     await page.evaluate(() => window.WebKiosk.applySettings(JSON.stringify({ version: 3, values: { update_channel: 'beta', volume_lock: 60, nightly_hour: 5 } })));
     await until(async () => (await status(page)).settings_version === 3);
