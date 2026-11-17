@@ -289,7 +289,10 @@ fi
 
 step "seatd: labwc mag het scherm en de invoer gebruiken zonder desktop"
 systemctl enable --now seatd
-usermod -aG seat,video,input,render,audio "$KIOSK_USER" || true
+# Elke groep apart: bestaat er één niet (zoals seat op Trixie), dan faalde usermod voor alle groepen
+for g in seat video input render audio; do
+  getent group "$g" >/dev/null && usermod -aG "$g" "$KIOSK_USER"
+done
 
 step "Wifi-land NL"
 raspi-config nonint do_wifi_country NL < /dev/null || true
