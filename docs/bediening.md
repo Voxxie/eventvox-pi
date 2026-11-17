@@ -47,6 +47,7 @@ en worden één keer uitgevoerd.
 | **EventVOX-Pi bijwerken** | Alleen de nieuwste EventVOX-Pi; daarna starten de agent en de browser opnieuw (de Pi niet) |
 | **Alles bijwerken** | De nieuwste EventVOX-Pi en de updates van Raspberry Pi OS en Chromium; daarna herstart de Pi, alleen als er iets nieuws was |
 | **Zoek mij** | 30 seconden een knipperend scherm en piepen via het scherm; een tik of toets stopt het. Een Pi heeft geen GPS: geen locatie |
+| **Scherm opfrissen** | Tegen een "ingebrand" beeld (beeldretentie) op de monitor: hoogstens 3 uur wisselende kleuren over het hele scherm; een tik of toets stopt het |
 | **Koppelen met Connect** | Zie hieronder |
 | **Ontkoppelen van Connect** | De Pi verdwijnt uit je Raspberry Pi Connect-account |
 

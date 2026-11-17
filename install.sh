@@ -83,7 +83,7 @@ fi
 step "EventVOX-Pi $(cat pi/VERSION) installeren in $OPT"
 mkdir -p "$OPT" "$CONF_DIR" "$STATE"
 install -m 0755 pi/agent.py pi/kiosk.sh pi/update.sh pi/cleanup.sh pi/wifi.py pi/ssh.py "$OPT/"
-install -m 0644 pi/bridge.js pi/locate.js pi/maintenance.js pi/VERSION pi/VERSION_CODE "$OPT/"
+install -m 0644 pi/bridge.js pi/locate.js pi/maintenance.js pi/refresh.js pi/VERSION pi/VERSION_CODE "$OPT/"
 install -m 0755 -o root -g root pi/eventvox-pi-root /usr/local/sbin/eventvox-pi-root
 chown "$KIOSK_USER:$KIOSK_USER" "$STATE"
 if [ ! -f "$CONF" ]; then

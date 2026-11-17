@@ -247,17 +247,30 @@ test('the real scanterminal of EventVOX hands the Pi\'s state and a command over
     }
 });
 
+test('Scherm opfrissen: colours over the whole page; a key stops it and does not reach the page', async () => {
+    const page = await terminalPage();
+    await page.evaluate(() => { window.__keys = []; document.addEventListener('keydown', (e) => window.__keys.push(e.key)); });
+    await page.evaluate(() => window.WebKiosk.command(JSON.stringify({ id: 15, command: 'refresh_screen' })));
+    await page.locator('[data-evx-refresh]').waitFor({ timeout: 8000 });
+    const first = await page.locator('[data-evx-refresh]').evaluate((el) => getComputedStyle(el).backgroundColor);
+    await page.waitForFunction((c) => getComputedStyle(document.querySelector('[data-evx-refresh]')).backgroundColor !== c, first, { timeout: 4000 });
+    await page.keyboard.press('a');
+    await page.locator('[data-evx-refresh]').waitFor({ state: 'detached', timeout: 4000 });
+    assert.deepEqual(await page.evaluate(() => window.__keys), [], 'the key that stopped it reached the page');
+    await page.close();
+});
+
 test('Raspberry Pi Connect from EventVOX: a sign-in link in the status until approved, then signed in; sign out', async () => {
     const page = await terminalPage();
     await until(async () => (await status(page)).connect?.installed === true);
     assert.equal((await status(page)).connect.signed_in, false);
-    await page.evaluate(() => window.WebKiosk.command(JSON.stringify({ id: 15, command: 'connect_signin' })));
+    await page.evaluate(() => window.WebKiosk.command(JSON.stringify({ id: 16, command: 'connect_signin' })));
     await until(async () => (await status(page)).connect?.verify_url === 'https://connect.raspberrypi.com/verify/ABCD-1234');
     assert.ok((await status(page)).connect.verify_until);
     writeFileSync(join(stateDir, 'rpic', 'approved'), '');
     await until(async () => (await status(page)).connect?.signed_in === true && !(await status(page)).connect.verify_url);
     assert.ok(!readFileSync(join(stateDir, 'log.txt'), 'utf8').includes('verify/'), 'the link is not in the log');
-    await page.evaluate(() => window.WebKiosk.command(JSON.stringify({ id: 16, command: 'connect_signout' })));
+    await page.evaluate(() => window.WebKiosk.command(JSON.stringify({ id: 17, command: 'connect_signout' })));
     await until(async () => (await status(page)).connect?.signed_in === false);
     await page.close();
 });

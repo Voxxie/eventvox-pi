@@ -345,6 +345,7 @@ class Agent:
         self.state = read_json('state.json', {})   # last_command_id, settings_version, settings, nightly_day, ...
         self.bridge = read_text(os.path.join(HOME, 'bridge.js'))
         self.locate_js = read_text(os.path.join(HOME, 'locate.js'))
+        self.refresh_js = read_text(os.path.join(HOME, 'refresh.js'))
         self.maintenance_js = read_text(os.path.join(HOME, 'maintenance.js'))
         self.maintenance = None   # de tekst die nu op het scherm staat (None: geen onderhoud)
         self.page = None
@@ -508,6 +509,8 @@ class Agent:
             self.root('update-app')
         elif name == 'locate':
             self.locate()
+        elif name == 'refresh_screen':
+            self.refresh_screen()
         elif name == 'connect_signin':
             threading.Thread(target=self.rpi_connect_signin, daemon=True).start()
         elif name == 'connect_signout':
@@ -695,6 +698,15 @@ class Agent:
         if self.page and self.page.alive and self.locate_js:
             try:
                 self.page.call('Runtime.evaluate', {'expression': self.locate_js, 'userGesture': True})
+            except (ConnectionError, RuntimeError):
+                pass
+
+    def refresh_screen(self):
+        """Scherm opfrissen (refresh.js): hoogstens 3 uur wisselende kleuren tegen beeldretentie; een tik of toets stopt het"""
+        if self.page and self.page.alive and self.refresh_js:
+            try:
+                self.page.call('Runtime.evaluate', {'expression': self.refresh_js})
+                self.log.add('Scherm opfrissen gestart (hoogstens 3 uur; een tik of toets stopt het)')
             except (ConnectionError, RuntimeError):
                 pass
 
