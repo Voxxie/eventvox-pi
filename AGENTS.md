@@ -26,7 +26,7 @@ zijn **Nederlands**. Handleiding: `docs/` (werk die bij bij elke zichtbare wijzi
    (`pi/wifi.py`: strenge controle, nmcli zonder shell, alleen eigen `evx-`-verbindingen); nooit wachtwoorden in een
    bestand of logboek. Bestanden in `/opt/eventvox-pi` zijn van root. De debugpoort van Chromium alleen op 127.0.0.1.
 7. Geen locatie (een Pi heeft geen GPS en dat blijft zo), geen geheimen of gescande codes in het logboek.
-8. Onderspanning (`undervoltage`) wordt gemeld maar bewust niet getoond in EventVOX (bekend, voorlopig niets mee doen).
+8. Onderspanning (`undervoltage`, `undervoltage_seen`, `throttled`) staat in EventVOX op de terminalpagina bij *Voeding* (frontend `piPowerText`).
 
 ## Opbouw
 | Pad | Wat |
