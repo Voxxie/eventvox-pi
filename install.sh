@@ -74,7 +74,12 @@ step() { echo "==> $*"; }
 PACKAGES="labwc seatd swayidle fonts-liberation python3 iw curl unattended-upgrades pcscd python3-pyscard"
 # Een pakket dat apt echt kan installeren. Niet apt-cache show: die slaagt ook voor een naam die alleen genoemd wordt
 # (chromium-browser op Debian 13: "has no installation candidate"). LC_ALL=C: anders staat er bijvoorbeeld "Kandidaat"
-installable() { LC_ALL=C apt-cache policy "$1" 2>/dev/null | grep -q 'Candidate: [^(]'; }
+# Geen pijp naar grep -q: die stopt bij de eerste treffer, apt-cache krijgt SIGPIPE en met pipefail telt dat als "nee"
+installable() {
+  local policy
+  policy="$(LC_ALL=C apt-cache policy "$1" 2>/dev/null)" || return 1
+  [[ "$policy" == *"Candidate: "[!\(]* ]]
+}
 # Nog nooit een pakketlijst opgehaald (een verse Debian): eerst ophalen, anders lijkt alles te ontbreken
 installable labwc || apt-get update -q || true
 if ! installable labwc; then
