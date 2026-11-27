@@ -4,11 +4,22 @@ name: Image EventVOX-Pi
 # beschrijving voor Raspberry Pi Imager (eventvox-pi.json en eventvox-pi.rpi-imager-manifest) aan de release hangen.
 # Basis: het officiële Raspberry Pi OS Lite (64-bit) uit de lijst van Imager; zie image/build.sh en docs/inrichten.md.
 # Handmatig starten (Actions > Image EventVOX-Pi > Run workflow) bouwt een proef-image als artifact (3 dagen bewaard).
+# Ook aangeroepen door "Release maken" (new-release.yml, workflow_call met de tag).
 
 on:
   release:
     types: [published]
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      tag:
+        description: De tag van de release (v1.2.3)
+        type: string
+        required: true
+      notes:
+        description: De notities van de release
+        type: string
+        required: false
 
 permissions:
   contents: write
@@ -18,13 +29,16 @@ jobs:
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 150
     if: github.event_name != 'release' || github.event.release.tag_name != 'beta'
+    env:
+      # De release: van het release-event, of van "Release maken" (workflow_call); leeg: een proef-image
+      RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Versie bepalen
         id: version
         env:
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ env.RELEASE_TAG }}
         run: |
           if [ -n "$TAG" ]; then
             NAME="${TAG#v}"
@@ -73,7 +87,7 @@ jobs:
 
       - name: Beschrijving voor Imager
         env:
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ env.RELEASE_TAG }}
         run: |
           V="${{ steps.version.outputs.name }}"
           URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG:-proef}/eventvox-pi-$V.img.xz"
@@ -84,14 +98,14 @@ jobs:
           cat dist/eventvox-pi.json
 
       - name: Aan release hangen
-        if: github.event_name == 'release'
+        if: env.RELEASE_TAG != ''
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ env.RELEASE_TAG }}
         run: gh release upload "$TAG" dist/* --clobber
 
       - name: Proef-image bewaren
-        if: github.event_name != 'release'
+        if: env.RELEASE_TAG == ''
         uses: actions/upload-artifact@v4
         with:
           name: eventvox-pi-${{ steps.version.outputs.name }}
