@@ -49,6 +49,9 @@ done
 
 while true; do
   SERIAL="$(grep -m1 '^Serial' /proc/cpuinfo | awk '{print $3}' | sed 's/^0*//')"
+  # Een pc: het serienummer dat eventvox-pi-identity (als root, uit het BIOS) heeft bewaard
+  [ -z "$SERIAL" ] && SERIAL="$(cat "$STATE/serial" 2>/dev/null)"
+  [ -z "$SERIAL" ] && SERIAL="$(hostname)"
   PAGE="${URL_TEMPLATE//\{serial\}/$SERIAL}"
   # Geen "Chromium is niet goed afgesloten"-balk: een kiosk wordt nooit netjes uitgezet
   sed -i 's/"exited_cleanly":false/"exited_cleanly":true/; s/"exit_type":"Crashed"/"exit_type":"Normal"/' \

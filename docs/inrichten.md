@@ -112,6 +112,34 @@ Na de herstart toont het scherm een **code van 6 tekens**. Ga in EventVOX naar *
 koppelen**, typ de code over, geef de terminal een naam en kies waar hij scant. Klaar: vanaf nu zie je hem in EventVOX
 en kun je hem bedienen ([bediening](bediening.md)).
 
+## Op een gewone pc (Debian)
+
+EventVOX-Pi werkt ook op een gewone pc of mini-pc (x86, 64-bit), bijvoorbeeld een oude kassa-pc of een Intel NUC. Hetzelfde
+`install.sh` ziet zelf dat het geen Raspberry Pi is.
+
+1. Installeer **Debian 12** (of nieuwer) met de netinst-ISO van [debian.org](https://www.debian.org/distrib/). Kies bij
+   *Software selecteren* **alleen** *SSH-server* en *Standaard systeemhulpmiddelen*: **geen** bureaubladomgeving. Maak een
+   gewone gebruiker aan (dat wordt de kiosk-gebruiker). Laat het root-wachtwoord leeg als je wilt: dan krijgt die
+   gebruiker meteen `sudo`.
+2. Liefst via de **netwerkkabel**. Stel je tijdens de installatie wifi in, dan beheert Debian die wifi zelf en kan EventVOX
+   de wifi-netwerken niet zetten; voeg wifi dan later toe vanuit EventVOX of met `WIFI_SSID=…` (zie Opties).
+3. Log in (op de pc of via SSH) en installeer zoals bij een Pi (stap 3): `curl …`, `sudo bash install.sh` (zonder
+   sudo: `su -` en dan `bash install.sh`), `sudo reboot`.
+4. Koppelen in EventVOX zoals bij een Pi (stap 4).
+
+Wat anders is dan op een Pi:
+
+- In EventVOX heet hij gewoon **EventVOX-Pi**, met het model van de pc (bijvoorbeeld *Dell Inc. OptiPlex 3060*).
+- Het **serienummer** komt uit het BIOS. Staat daar niets bruikbaars ("To Be Filled By O.E.M."), dan maakt hij een vast
+  nummer van de pc zelf. De naam op het netwerk wordt `eventvox-<laatste 8 tekens>`, als je bij de installatie de standaardnaam
+  `debian` liet staan.
+- **Geen Raspberry Pi Connect** (dat is er alleen voor een Raspberry Pi). Kijk op afstand mee met SSH (de sleutels zet je
+  vanuit EventVOX).
+- **Geen onderspanning** bij *Voeding* (dat meet alleen een Pi). De temperatuur en de vrije schijfruimte zie je wel.
+- Het opstartscherm (GRUB) en het geluid blijven zoals Debian ze zette. Het geluid gaat naar de standaarduitgang van de
+  pc. Werkt dat niet, kies dan met `alsamixer` (F6) een andere geluidskaart.
+- Bijwerken gaat net als op een Pi: EventVOX-Pi via GitHub, de rest via apt (Debian).
+
 ## Meer Pi's
 
 Doe stap 1–4 per Pi. Elke Pi krijgt vanzelf een eigen naam (`eventvox-<serienummer>`) en, in EventVOX, een eigen code.

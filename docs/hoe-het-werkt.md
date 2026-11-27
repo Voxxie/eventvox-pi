@@ -51,6 +51,8 @@
 - Geen meldingen op het scherm, het scherm gaat nooit uit, geluid via HDMI (`kiosk.sh` kiest bij elke start
   de HDMI-geluidskaart van het aangesloten scherm)
 - Eigen naam en SSH-sleutels per Pi (`eventvox-<serienummer>`), ook als je een SD-kaart kloont
+  (`/usr/local/sbin/eventvox-pi-identity`, bij elke start). Op een pc zet hij daar ook het serienummer uit het BIOS
+  (alleen root kan dat lezen) in `/var/lib/eventvox-pi/serial`, voor de agent en `kiosk.sh`
 - Automatische beveiligingsupdates
 - **Onderhoud** (ook bij bijwerken):
   - elke week, in de nacht van zondag op maandag (`eventvox-pi-cleanup.timer`, `cleanup.sh`): oude pakketten en

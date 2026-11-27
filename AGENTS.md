@@ -40,8 +40,16 @@ zijn **Nederlands**. Handleiding: `docs/` (werk die bij bij elke zichtbare wijzi
 | `pi/cleanup.sh` | Wekelijks opruimen als root (`eventvox-pi-cleanup.timer`); raakt nooit de opstart, instellingen of het Chromium-profiel (behalve crashrapporten) |
 | `pi/wifi.py` | Wifi-netwerken uit EventVOX zetten (als root, nmcli) |
 | `pi/ssh.py` | SSH-sleutels uit EventVOX in authorized_keys (als root) |
+| `pi/identity.sh` | `/usr/local/sbin/eventvox-pi-identity` (als root, bij elke start): eigen naam en SSH-sleutels per toestel; op een pc ook het serienummer (BIOS, anders product-UUID of machine-id) in `/var/lib/eventvox-pi/serial` |
 | `image/` | Het SD-kaart-image (`qemu-test.sh`: opstarttest in een nagebootste Pi 3B, in `image.yml` vóór het uploaden; `build.sh`: officieel Raspberry Pi OS Lite 64-bit + pakketten + `/opt/eventvox-pi-kit`; `firstboot.sh`: wacht op gebruiker uit Imager, `install.sh --firstboot`, herstart; `manifest.py`: beschrijving voor Imager met `init_format` van het basis-image). Workflow `image.yml` (arm64-runner). |
-| `tests/` | `run.sh`: shellcheck, `update.test.sh`, `wifi.test.sh`, `ssh.test.sh`, `cleanup.test.sh`, `firstboot.test.sh`, `install-connect.test.sh`, `splash.test.sh`, `agent.test.mjs` |
+| `tests/` | `run.sh`: shellcheck, `update.test.sh`, `wifi.test.sh`, `ssh.test.sh`, `cleanup.test.sh`, `firstboot.test.sh`, `install-connect.test.sh`, `splash.test.sh`, `identity.test.sh` (naam, serienummer, model, wifi-interface op Pi en pc), `agent.test.mjs` |
+
+## Pi of pc
+`install.sh` werkt ook op een x86-pc met Debian 12+ zonder bureaublad (`PLATFORM=pc`: geen Raspberry Pi in
+`/proc/device-tree/model`). Daar geen `raspi-config` (automatisch inloggen via een getty-override, wifi-land via
+`cfg80211`, naam via `hostnamectl`), geen `config.txt`/`cmdline.txt`, geen Raspberry Pi Connect; extra pakketten `sudo`,
+`network-manager`, `alsa-utils`. Het serienummer komt uit `/var/lib/eventvox-pi/serial` (`pi/identity.sh`), het model uit DMI
+(`agent.model()`), de wifi-interface is niet altijd `wlan0` (`wlan()`). Op een Pi verandert niets: houd die paden gelijk.
 
 ## Testen
 Er is geen Pi: test wat kan (`tests/run.sh`, ook in CI) en zeg eerlijk wat alleen op een Pi te testen is (labwc, HDMI,

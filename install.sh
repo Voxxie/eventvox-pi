@@ -1,6 +1,7 @@
 #!/bin/bash
 # ---------------------------------------------------------------------------------------------------------------------
 # EventVOX-Pi: maakt van een Raspberry Pi (3B of nieuwer, Raspberry Pi OS Lite Bookworm) een EventVOX-scanterminal.
+# Ook op een gewone pc (x86, Debian 12 of nieuwer zonder bureaublad): install.sh ziet zelf of het een Pi of een pc is.
 #
 #   curl -fsSLO https://github.com/Voxxie/eventvox-pi/releases/latest/download/install.sh
 #   sudo bash install.sh            eerste keer (na het flashen met Raspberry Pi Imager)
@@ -11,11 +12,12 @@
 #   CONNECT_AUTH_KEY=rpuak_...      Raspberry Pi Connect koppelen zonder inloggen (of: connect-auth.key op de bootpartitie)
 #   WIFI_SSID=... WIFI_PASSWORD=... een (extra) wifi-netwerk; liever via Raspberry Pi Imager
 #   URL=https://...{serial}         een ander adres dan https://eventvox.nl/scanterminal/?serial={serial}
-#   KIOSK_USER=...                  standaard de eerste gebruiker (uid 1000), zoals ingesteld in Imager
+#   KIOSK_USER=...                  standaard de eerste gebruiker (uid 1000), uit Imager of de Debian-installatie
 #
 # Zie README.md en docs/. Wat het doet: labwc (Wayland) + Chromium als kiosk op de scanterminal, geen popups, geluid via HDMI,
 # een eigen hostname per Pi, de agent die EventVOX de Pi laat zien en bedienen, bijwerken via GitHub, automatische
-# beveiligingsupdates en Raspberry Pi Connect (op afstand meekijken).
+# beveiligingsupdates en Raspberry Pi Connect (op afstand meekijken). Op een pc: geen config.txt/cmdline.txt en geen
+# Connect; automatisch inloggen, wifi-land en de naam gaan daar zonder raspi-config.
 # ---------------------------------------------------------------------------------------------------------------------
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -45,6 +47,8 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 OPT=/opt/eventvox-pi
+# Een Raspberry Pi of een pc (alles zonder Raspberry Pi in de device tree: een x86-pc met Debian)
+if grep -qa 'Raspberry Pi' /proc/device-tree/model 2>/dev/null; then PLATFORM=pi; else PLATFORM=pc; fi
 STATE=/var/lib/eventvox-pi
 CONF_DIR=/etc/eventvox-pi
 CONF="$CONF_DIR/config"
@@ -56,7 +60,7 @@ KIOSK_USER="${KIOSK_USER:-$(getent passwd 1000 | cut -d: -f1)}"
 URL="${URL:-https://eventvox.nl/scanterminal/?serial={serial}}"
 KIOSK_HOME="$(getent passwd "$KIOSK_USER" | cut -d: -f6)"
 if [ -z "$KIOSK_USER" ] || [ ! -d "$KIOSK_HOME" ]; then
-  echo "Geen kiosk-gebruiker gevonden. Maak er een in Raspberry Pi Imager, of geef KIOSK_USER=naam mee." >&2
+  echo "Geen kiosk-gebruiker gevonden. Maak er een in Raspberry Pi Imager (pc: bij de Debian-installatie), of geef KIOSK_USER=naam mee." >&2
   exit 1
 fi
 KIOSK_UID="$(id -u "$KIOSK_USER")"
@@ -68,6 +72,8 @@ step() { echo "==> $*"; }
 # --- pakketten ----------------------------------------------------------------------------------------------------------
 
 PACKAGES="labwc seatd swayidle wlrctl fonts-liberation python3 iw curl unattended-upgrades pcscd python3-pyscard"
+# Een kale Debian heeft geen sudo (als root een wachtwoord kreeg) en geen NetworkManager (wifi uit EventVOX gaat via nmcli)
+[ "$PLATFORM" = pc ] && PACKAGES="$PACKAGES sudo network-manager alsa-utils"
 if apt-cache show chromium-browser >/dev/null 2>&1; then PACKAGES="$PACKAGES chromium-browser"; else PACKAGES="$PACKAGES chromium"; fi
 MISSING=""
 for p in $PACKAGES; do dpkg -s "$p" >/dev/null 2>&1 || MISSING="$MISSING $p"; done
@@ -93,6 +99,7 @@ mkdir -p "$OPT" "$CONF_DIR" "$STATE"
 install -m 0755 pi/agent.py pi/kiosk.sh pi/update.sh pi/cleanup.sh pi/wifi.py pi/ssh.py pi/splash.py "$OPT/"
 install -m 0644 pi/bridge.js pi/locate.js pi/maintenance.js pi/refresh.js pi/logo.tga pi/VERSION pi/VERSION_CODE "$OPT/"
 install -m 0755 -o root -g root pi/eventvox-pi-root /usr/local/sbin/eventvox-pi-root
+install -m 0755 -o root -g root pi/identity.sh /usr/local/sbin/eventvox-pi-identity
 chown "$KIOSK_USER:$KIOSK_USER" "$STATE"
 if [ ! -f "$CONF" ]; then
   cat > "$CONF" <<EOF
@@ -295,11 +302,22 @@ for g in seat video input render audio; do
 done
 
 step "Wifi-land NL"
-raspi-config nonint do_wifi_country NL < /dev/null || true
+if [ "$PLATFORM" = pi ]; then
+  raspi-config nonint do_wifi_country NL < /dev/null || true
+else
+  # Zonder raspi-config: meteen (iw) en na elke start (de wifi-module krijgt het land mee)
+  echo "options cfg80211 ieee80211_regdom=NL" > /etc/modprobe.d/eventvox-pi-wifi.conf
+  iw reg set NL >/dev/null 2>&1 || true
+fi
+# De wifi-interface: wlan0 op een Pi, op een pc vaak een andere naam (wlp2s0)
+WLAN=wlan0
+if [ ! -e /sys/class/net/wlan0 ]; then
+  for w in /sys/class/net/*/wireless; do [ -e "$w" ] && { WLAN="$(basename "$(dirname "$w")")"; break; }; done
+fi
 if [ -n "${WIFI_SSID:-}" ] && command -v nmcli >/dev/null 2>&1; then
   step "Wifi-netwerk ${WIFI_SSID} toevoegen"
   nmcli connection delete "eventvox-wifi" >/dev/null 2>&1 || true
-  nmcli connection add type wifi con-name "eventvox-wifi" ifname wlan0 ssid "$WIFI_SSID" \
+  nmcli connection add type wifi con-name "eventvox-wifi" ifname "$WLAN" ssid "$WIFI_SSID" \
     wifi-sec.key-mgmt wpa-psk wifi-sec.psk "${WIFI_PASSWORD:-}" connection.autoconnect yes >/dev/null
 fi
 
@@ -313,7 +331,20 @@ EOF
 done
 
 step "Automatisch inloggen op tty1, labwc en de kiosk starten"
-raspi-config nonint do_boot_behaviour B2 < /dev/null
+if [ "$PLATFORM" = pi ]; then
+  raspi-config nonint do_boot_behaviour B2 < /dev/null
+else
+  # Zoals raspi-config B2: getty op tty1 logt de kiosk-gebruiker zelf in
+  mkdir -p /etc/systemd/system/getty@tty1.service.d
+  cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf <<EOF
+# EventVOX-Pi (install.sh): de kiosk-gebruiker automatisch inloggen op het scherm
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin $KIOSK_USER --noclear %I \$TERM
+EOF
+  systemctl daemon-reload
+  systemctl set-default multi-user.target >/dev/null 2>&1 || true
+fi
 cat > "$KIOSK_HOME/.bash_profile" <<'EOF'
 # EventVOX-Pi: op het scherm (tty1) meteen labwc met de kiosk; via SSH een gewone shell
 if [ -z "${WAYLAND_DISPLAY:-}" ] && [ "$(tty)" = "/dev/tty1" ]; then
@@ -327,6 +358,7 @@ cat > "$KIOSK_HOME/.config/labwc/autostart" <<'EOF'
 EOF
 chown -R "$KIOSK_USER:$KIOSK_USER" "$KIOSK_HOME/.bash_profile" "$KIOSK_HOME/.config"
 
+if [ "$PLATFORM" = pi ]; then
 step "Opstartscherm rustig, scherm nooit uit, geluid via HDMI"
 CONFIG_TXT=/boot/firmware/config.txt; [ -f "$CONFIG_TXT" ] || CONFIG_TXT=/boot/config.txt
 CMDLINE_TXT=/boot/firmware/cmdline.txt; [ -f "$CMDLINE_TXT" ] || CMDLINE_TXT=/boot/cmdline.txt
@@ -341,29 +373,16 @@ grep -q "logo.nologo" "$CMDLINE_TXT" || sed -i 's/$/ logo.nologo/' "$CMDLINE_TXT
 grep -q "consoleblank=" "$CMDLINE_TXT" || sed -i 's/$/ consoleblank=0/' "$CMDLINE_TXT"
 amixer cset numid=3 2 >/dev/null 2>&1 < /dev/null || true
 alsactl store >/dev/null 2>&1 || true
-
-step "Eigen hostname per Pi (eventvox-<serienummer>), ook na het klonen van een kaart"
-cat > /usr/local/sbin/eventvox-pi-identity <<'EOF'
-#!/bin/bash
-# Eigen naam en SSH-sleutels per Pi. Bij de eerste keer: de naam uit Raspberry Pi Imager blijft, alleen de standaardnaam
-# raspberrypi wordt eventvox-<serienummer>. Op een gekloonde SD-kaart (ander serienummer dan de vorige keer): een eigen
-# naam en nieuwe SSH-sleutels, zodat niet alle Pi's hetzelfde op het netwerk staan.
-SERIAL="$(grep -m1 '^Serial' /proc/cpuinfo | awk '{print $3}' | tail -c 9)"
-PREVIOUS="$(cat /var/lib/eventvox-pi/identity 2>/dev/null)"
-[ "$PREVIOUS" = "$SERIAL" ] && exit 0
-if [ -n "$PREVIOUS" ]; then
-  raspi-config nonint do_hostname "eventvox-$SERIAL" < /dev/null
-  rm -f /etc/ssh/ssh_host_*
-  ssh-keygen -A
-elif [ "$(hostname)" = "raspberrypi" ]; then
-  raspi-config nonint do_hostname "eventvox-$SERIAL" < /dev/null
+else
+  # Een pc: de opstart (GRUB) blijft zoals Debian hem zette; de kiosk (labwc) zet het scherm niet uit
+  echo "==> Pc: opstart en geluid blijven zoals Debian ze zette"   # geen step: firstboot.sh (Pi) telt die
 fi
-echo "$SERIAL" > /var/lib/eventvox-pi/identity
-EOF
-chmod 0755 /usr/local/sbin/eventvox-pi-identity
+
+step "Eigen hostname per toestel (eventvox-<serienummer>), ook na het klonen van een kaart of schijf"
+# pi/identity.sh staat hierboven al als /usr/local/sbin/eventvox-pi-identity (op een pc zet hij ook het serienummer)
 cat > /etc/systemd/system/eventvox-pi-identity.service <<'EOF'
 [Unit]
-Description=EventVOX-Pi: eigen hostname en SSH-sleutels per Pi
+Description=EventVOX-Pi: eigen hostname, serienummer en SSH-sleutels per toestel
 Before=ssh.service
 After=local-fs.target
 
@@ -425,12 +444,16 @@ setup_connect() {
   fi
   return 0
 }
-step "Raspberry Pi Connect (op afstand meekijken en een terminal)"
-setup_connect || echo "    Raspberry Pi Connect instellen lukte niet; koppel later vanuit EventVOX (Koppelen met Connect)." >&2
+if [ "$PLATFORM" = pc ]; then
+  echo "==> Raspberry Pi Connect: alleen op een Raspberry Pi; op een pc overgeslagen"
+else
+  step "Raspberry Pi Connect (op afstand meekijken en een terminal)"
+  setup_connect || echo "    Raspberry Pi Connect instellen lukte niet; koppel later vanuit EventVOX (Koppelen met Connect)." >&2
+fi
 echo ""
 if [ "$FIRSTBOOT" = 1 ]; then
   echo "==> Klaar (eerste start van het image)"
   exit 0
 fi
-echo "==> Klaar. Herstart met:  sudo reboot"
+echo "==> Klaar ($([ "$PLATFORM" = pi ] && echo "Raspberry Pi" || echo "pc")). Herstart met:  sudo reboot"
 echo "    Daarna toont het scherm een code: koppel de terminal in EventVOX (Toegang > Terminals > Terminal koppelen)."
