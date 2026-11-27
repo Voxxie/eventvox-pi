@@ -57,7 +57,9 @@ CONF="$CONF_DIR/config"
 # shellcheck disable=SC1090
 [ -r "$CONF" ] && . "$CONF"
 KIOSK_USER="${KIOSK_USER:-$(getent passwd 1000 | cut -d: -f1)}"
-URL="${URL:-https://eventvox.nl/scanterminal/?serial={serial}}"
+# Niet ${URL:-…{serial}}: de eerste } sluit de standaardwaarde af, en een eigen URL kreeg er dan een } achter
+DEFAULT_URL='https://eventvox.nl/scanterminal/?serial={serial}'
+URL="${URL:-$DEFAULT_URL}"
 KIOSK_HOME="$(getent passwd "$KIOSK_USER" | cut -d: -f6)"
 if [ -z "$KIOSK_USER" ] || [ ! -d "$KIOSK_HOME" ]; then
   echo "Geen kiosk-gebruiker gevonden. Maak er een in Raspberry Pi Imager (pc: bij de Debian-installatie), of geef KIOSK_USER=naam mee." >&2
@@ -74,7 +76,12 @@ step() { echo "==> $*"; }
 PACKAGES="labwc seatd swayidle fonts-liberation python3 iw curl unattended-upgrades pcscd python3-pyscard"
 # Een pakket dat apt echt kan installeren. Niet apt-cache show: die slaagt ook voor een naam die alleen genoemd wordt
 # (chromium-browser op Debian 13: "has no installation candidate"). LC_ALL=C: anders staat er bijvoorbeeld "Kandidaat"
-installable() { LC_ALL=C apt-cache policy "$1" 2>/dev/null | grep -q 'Candidate: [^(]'; }
+# Geen pijp naar grep -q: die stopt bij de eerste treffer, apt-cache krijgt SIGPIPE en met pipefail telt dat als "nee"
+installable() {
+  local policy
+  policy="$(LC_ALL=C apt-cache policy "$1" 2>/dev/null)" || return 1
+  [[ "$policy" == *"Candidate: "[!\(]* ]]
+}
 # Nog nooit een pakketlijst opgehaald (een verse Debian): eerst ophalen, anders lijkt alles te ontbreken
 installable labwc || apt-get update -q || true
 if ! installable labwc; then
