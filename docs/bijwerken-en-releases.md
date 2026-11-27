@@ -25,7 +25,14 @@ Zet één of twee Pi's op het testkanaal om een nieuwe versie eerst te proberen.
 ## Een nieuwe versie uitbrengen
 
 1. Zorg dat de controle op `main` groen is (Actions → *Controle*).
-2. Maak een **release** op GitHub met een nieuwe tag `vMAJOR.MINOR.PATCH`, bijvoorbeeld `v1.0.1`.
+2. **Met één klik (aanbevolen):** Actions → **Release maken** → *Run workflow* (op `main`). Kies:
+   - **kanaal**: *stabiel* (alle Pi's) of *test* (een pre-release, alleen Pi's op het testkanaal);
+   - **stap**: *patch* (0.0.23 → 0.0.24), *minor* (→ 0.1.0) of *major* (→ 1.0.0);
+   - optioneel een **titel** en eigen **notities** (leeg: de gemergde PR's sinds de vorige versie).
+
+   Hij maakt de tag en de release, en meteen het pakket, `update.json` en het image (stap 3 hieronder).
+
+   **Of met de hand:** maak een **release** op GitHub met een nieuwe tag `vMAJOR.MINOR.PATCH`, bijvoorbeeld `v1.0.1`.
    - MINOR en PATCH zijn 0–99; elke nieuwe tag is hoger dan de vorige. Hergebruik nooit een tag.
    - Eerst testen? Vink **Set as a pre-release** aan: alleen Pi's op het testkanaal krijgen hem. Werkt hij, haal het
      vinkje weg (of maak een gewone release).

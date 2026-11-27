@@ -42,14 +42,16 @@ zijn **Nederlands**. Handleiding: `docs/` (werk die bij bij elke zichtbare wijzi
 | `pi/ssh.py` | SSH-sleutels uit EventVOX in authorized_keys (als root) |
 | `pi/identity.sh` | `/usr/local/sbin/eventvox-pi-identity` (als root, bij elke start): eigen naam en SSH-sleutels per toestel; op een pc ook het serienummer (BIOS, anders product-UUID of machine-id) in `/var/lib/eventvox-pi/serial` |
 | `image/` | Het SD-kaart-image (`qemu-test.sh`: opstarttest in een nagebootste Pi 3B, in `image.yml` vóór het uploaden; `build.sh`: officieel Raspberry Pi OS Lite 64-bit + pakketten + `/opt/eventvox-pi-kit`; `firstboot.sh`: wacht op gebruiker uit Imager, `install.sh --firstboot`, herstart; `manifest.py`: beschrijving voor Imager met `init_format` van het basis-image). Workflow `image.yml` (arm64-runner). |
+| `.github/workflows/` | `check.yml` (tests), `pc-test.yml` (`image/pc-test.sh`: kale Debian 13 in QEMU/KVM, install.sh, herstart, controle dat Chromium met het BIOS-serienummer start en WebKiosk het pc-model geeft; schermafbeelding als artifact; bij elke PR die install.sh of pi/ raakt), `release.yml` (pakket + update.json), `image.yml` (SD-kaart-image), `new-release.yml` (*Release maken*: één knop, volgend versienummer, notities, release, roept `release.yml` en `image.yml` aan via `workflow_call`) |
 | `tests/` | `run.sh`: shellcheck, `update.test.sh`, `wifi.test.sh`, `ssh.test.sh`, `cleanup.test.sh`, `firstboot.test.sh`, `install-connect.test.sh`, `splash.test.sh`, `identity.test.sh` (naam, serienummer, model, wifi-interface op Pi en pc), `agent.test.mjs` |
 
 ## Pi of pc
-`install.sh` werkt ook op een x86-pc met Debian 12+ zonder bureaublad (`PLATFORM=pc`: geen Raspberry Pi in
+`install.sh` werkt ook op een x86-pc met Debian 13+ zonder bureaublad (`PLATFORM=pc`: geen Raspberry Pi in
 `/proc/device-tree/model`). Daar geen `raspi-config` (automatisch inloggen via een getty-override, wifi-land via
 `cfg80211`, naam via `hostnamectl`), geen `config.txt`/`cmdline.txt`, geen Raspberry Pi Connect; extra pakketten `sudo`,
 `network-manager`, `alsa-utils`. Het serienummer komt uit `/var/lib/eventvox-pi/serial` (`pi/identity.sh`), het model uit DMI
 (`agent.model()`), de wifi-interface is niet altijd `wlan0` (`wlan()`). Op een Pi verandert niets: houd die paden gelijk.
+De proef op een pc (`image/pc-test.sh`, workflow *Proef op een pc*) draait de echte installatie op een nagebootste pc.
 
 ## Testen
 Er is geen Pi: test wat kan (`tests/run.sh`, ook in CI) en zeg eerlijk wat alleen op een Pi te testen is (labwc, HDMI,

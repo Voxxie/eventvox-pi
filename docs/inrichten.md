@@ -117,7 +117,7 @@ en kun je hem bedienen ([bediening](bediening.md)).
 EventVOX-Pi werkt ook op een gewone pc of mini-pc (x86, 64-bit), bijvoorbeeld een oude kassa-pc of een Intel NUC. Hetzelfde
 `install.sh` ziet zelf dat het geen Raspberry Pi is.
 
-1. Installeer **Debian 12** (of nieuwer) met de netinst-ISO van [debian.org](https://www.debian.org/distrib/). Kies bij
+1. Installeer **Debian 13 (trixie)** of nieuwer (Debian 12 heeft geen labwc) met de netinst-ISO van [debian.org](https://www.debian.org/distrib/). Kies bij
    *Software selecteren* **alleen** *SSH-server* en *Standaard systeemhulpmiddelen*: **geen** bureaubladomgeving. Maak een
    gewone gebruiker aan (dat wordt de kiosk-gebruiker). Laat het root-wachtwoord leeg als je wilt: dan krijgt die
    gebruiker meteen `sudo`.
@@ -139,6 +139,10 @@ Wat anders is dan op een Pi:
 - Het opstartscherm (GRUB) en het geluid blijven zoals Debian ze zette. Het geluid gaat naar de standaarduitgang van de
   pc. Werkt dat niet, kies dan met `alsamixer` (F6) een andere geluidskaart.
 - Bijwerken gaat net als op een Pi: EventVOX-Pi via GitHub, de rest via apt (Debian).
+
+Bij elke wijziging draait GitHub de installatie ook op een nagebootste pc (Actions → *Proef op een pc*): kale Debian 13,
+`install.sh`, herstart, en dan moet de scanterminal-pagina openen met het serienummer en model uit het BIOS. De
+schermafbeelding staat bij die run (artifact *pc-test*). Echte hardware (geluid, wifi, NFC-lezer) test dat niet.
 
 ## Meer Pi's
 

@@ -1,0 +1,48 @@
+name: Proef op een pc
+
+# EventVOX-Pi op een nagebootste pc (image/pc-test.sh): kale Debian 13 in QEMU met KVM, install.sh uit deze checkout,
+# herstart, en controleren dat Chromium met het serienummer uit het BIOS start en de agent window.WebKiosk zet (met het
+# model van de pc). Schermafbeelding en logboek als artifact. Bij een wijziging in install.sh of pi/, en met de hand.
+on:
+  pull_request:
+    paths:
+      - install.sh
+      - 'pi/**'
+      - image/pc-test.sh
+      - .github/workflows/pc-test.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pc-test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pc:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: QEMU en KVM
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends qemu-system-x86 qemu-utils genisoimage
+          # KVM voor deze gebruiker (anders nagebootst zonder hardware-hulp: veel trager)
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm || echo "geen KVM: nagebootst (traag)"
+
+      - name: Proef
+        run: image/pc-test.sh pc-test-out
+
+      - name: Schermafbeelding en logboek bewaren
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pc-test
+          path: pc-test-out/
+          retention-days: 14

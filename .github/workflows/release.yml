@@ -5,10 +5,22 @@ name: Release EventVOX-Pi
 #   stabiel: releases/latest/download/update.json (GitHub slaat pre-releases over)
 #   test:    releases/download/beta/update.json (de rollende pre-release "beta", ook voor pre-releases)
 # versionCode = MAJOR*10000 + MINOR*100 + PATCH: altijd hoger dan de vorige, nooit een tag hergebruiken.
+# Ook aangeroepen door "Release maken" (new-release.yml, workflow_call met tag en notes): een release die een workflow met
+# GITHUB_TOKEN maakt, start deze workflow niet vanzelf.
 
 on:
   release:
     types: [published]
+  workflow_call:
+    inputs:
+      tag:
+        description: De tag van de release (v1.2.3)
+        type: string
+        required: true
+      notes:
+        description: De notities van de release
+        type: string
+        required: false
 
 permissions:
   contents: write
@@ -16,14 +28,18 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-24.04
-    if: github.event.release.tag_name != 'beta'
+    if: github.event_name != 'release' || github.event.release.tag_name != 'beta'
+    env:
+      # De release: van het release-event, of van "Release maken" (workflow_call)
+      RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+      RELEASE_NOTES: ${{ inputs.notes || github.event.release.body }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Versie bepalen
         id: version
         env:
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ env.RELEASE_TAG }}
         run: |
           NAME="${TAG#v}"
           if ! [[ "$NAME" =~ ^([0-9]+)\.([0-9]{1,2})(\.([0-9]{1,2}))?$ ]]; then
@@ -45,8 +61,8 @@ jobs:
 
       - name: update.json maken
         env:
-          TAG: ${{ github.event.release.tag_name }}
-          NOTES: ${{ github.event.release.body }}
+          TAG: ${{ env.RELEASE_TAG }}
+          NOTES: ${{ env.RELEASE_NOTES }}
         run: |
           FILE="eventvox-pi-${{ steps.version.outputs.name }}.tar.gz"
           jq -n \
@@ -62,7 +78,7 @@ jobs:
       - name: Aan release hangen
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ env.RELEASE_TAG }}
         run: gh release upload "$TAG" dist/* --clobber
 
       - name: Testkanaal bijwerken (release "beta")
