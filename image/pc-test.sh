@@ -130,7 +130,7 @@ write_files:
       [Install]
       WantedBy=multi-user.target
 runcmd:
-  - [ bash, -c, 'set -e; mkdir -p /mnt/seed /root/kit; mount -o ro /dev/sr0 /mnt/seed; tar -xzf /mnt/seed/kit.tar.gz -C /root/kit; echo "=== EVX-PC-TEST install.sh begint" > /dev/ttyS0; URL="http://10.0.2.2:$PORT/scanterminal/?serial={serial}" bash /root/kit/install.sh > /dev/ttyS0 2>&1 && echo "=== EVX-PC-TEST install.sh klaar" > /dev/ttyS0 || echo "=== EVX-PC-TEST install.sh MISLUKT" > /dev/ttyS0; echo "PAGE_MATCH=^http://10\\.0\\.2\\.2:$PORT/scanterminal" >> /etc/eventvox-pi/config; systemctl enable evx-pc-test-report.service; sync; systemctl reboot' ]
+  - [ bash, -c, 'set -e; mkdir -p /mnt/seed /root/kit; mount -o ro /dev/sr0 /mnt/seed; tar -xzf /mnt/seed/kit.tar.gz -C /root/kit; echo "=== EVX-PC-TEST install.sh begint" > /dev/ttyS0; if URL="http://10.0.2.2:$PORT/scanterminal/?serial={serial}" bash -x /root/kit/install.sh > /root/install.log 2>&1; then echo "=== EVX-PC-TEST install.sh klaar" > /dev/ttyS0; else tail -n 60 /root/install.log | while IFS= read -r l; do echo "EVX-LOG: \$l"; done > /dev/ttyS0; echo "=== EVX-PC-TEST install.sh MISLUKT" > /dev/ttyS0; fi; echo "PAGE_MATCH=^http://10\\.0\\.2\\.2:$PORT/scanterminal" >> /etc/eventvox-pi/config; systemctl enable evx-pc-test-report.service; sync; systemctl reboot' ]
 EOF
 cp "$W/seed/user-data" "$OUT/user-data.yaml"   # ter controle bij een fout
 genisoimage -quiet -o "$W/seed.iso" -V cidata -J -r "$W/seed" || fail "seed-ISO maken"
@@ -154,7 +154,12 @@ while [ ! -s "$OUT/report.json" ]; do
   [ $(( $(date +%s) - START )) -gt "$TIMEOUT_S" ] && fail "geen verslag van de pagina binnen $((TIMEOUT_S / 60)) min"
   NOW="$(grep -ao '=== EVX-PC-TEST install.sh [A-Za-z]*' "$OUT/serial.log" 2>/dev/null | tail -1)"
   [ -n "$NOW" ] && [ "$NOW" != "$LAST" ] && { echo "    $(( ($(date +%s) - START) / 60 )) min: ${NOW#=== EVX-PC-TEST }"; LAST="$NOW"; }
-  grep -aq 'EVX-PC-TEST install.sh MISLUKT' "$OUT/serial.log" 2>/dev/null && fail "install.sh mislukt"
+  if grep -aq 'EVX-PC-TEST install.sh MISLUKT' "$OUT/serial.log" 2>/dev/null; then
+    # De laatste regels van install.sh (bash -x), los van de meldingen van systemd op dezelfde console
+    echo "--- laatste regels van install.sh:" >&2
+    grep -a '^EVX-LOG: ' "$OUT/serial.log" | sed 's/^EVX-LOG: //' | tr -d '\r' >&2
+    fail "install.sh mislukt"
+  fi
   sleep 10
 done
 echo "    verslag na $(( ($(date +%s) - START) / 60 )) min"
