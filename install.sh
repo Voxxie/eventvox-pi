@@ -72,17 +72,20 @@ step() { echo "==> $*"; }
 # --- pakketten ----------------------------------------------------------------------------------------------------------
 
 PACKAGES="labwc seatd swayidle fonts-liberation python3 iw curl unattended-upgrades pcscd python3-pyscard"
+# Een pakket dat apt echt kan installeren. Niet apt-cache show: die slaagt ook voor een naam die alleen genoemd wordt
+# (chromium-browser op Debian 13: "has no installation candidate"). LC_ALL=C: anders staat er bijvoorbeeld "Kandidaat"
+installable() { LC_ALL=C apt-cache policy "$1" 2>/dev/null | grep -q 'Candidate: [^(]'; }
 # Nog nooit een pakketlijst opgehaald (een verse Debian): eerst ophalen, anders lijkt alles te ontbreken
-apt-cache show labwc >/dev/null 2>&1 || apt-get update -q || true
-if ! apt-cache show labwc >/dev/null 2>&1; then
+installable labwc || apt-get update -q || true
+if ! installable labwc; then
   echo "labwc ontbreekt in de pakketbron. Op een pc: gebruik Debian 13 (trixie) of nieuwer; Debian 12 heeft geen labwc." >&2
   exit 1
 fi
 # Alleen als de pakketbron hem heeft: wlrctl zet de cursor na 15 s in de hoek (kiosk.sh), niet in elke Debian
-apt-cache show wlrctl >/dev/null 2>&1 && PACKAGES="$PACKAGES wlrctl"
+installable wlrctl && PACKAGES="$PACKAGES wlrctl"
 # Een kale Debian heeft geen sudo (als root een wachtwoord kreeg) en geen NetworkManager (wifi uit EventVOX gaat via nmcli)
 [ "$PLATFORM" = pc ] && PACKAGES="$PACKAGES sudo network-manager alsa-utils"
-if apt-cache show chromium-browser >/dev/null 2>&1; then PACKAGES="$PACKAGES chromium-browser"; else PACKAGES="$PACKAGES chromium"; fi
+if installable chromium-browser; then PACKAGES="$PACKAGES chromium-browser"; else PACKAGES="$PACKAGES chromium"; fi
 MISSING=""
 for p in $PACKAGES; do dpkg -s "$p" >/dev/null 2>&1 || MISSING="$MISSING $p"; done
 if [ -n "$MISSING" ]; then
