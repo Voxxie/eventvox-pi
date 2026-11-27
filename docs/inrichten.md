@@ -140,6 +140,10 @@ Wat anders is dan op een Pi:
   pc. Werkt dat niet, kies dan met `alsamixer` (F6) een andere geluidskaart.
 - Bijwerken gaat net als op een Pi: EventVOX-Pi via GitHub, de rest via apt (Debian).
 
+Bij elke wijziging draait GitHub de installatie ook op een nagebootste pc (Actions → *Proef op een pc*): kale Debian 12,
+`install.sh`, herstart, en dan moet de scanterminal-pagina openen met het serienummer en model uit het BIOS. De
+schermafbeelding staat bij die run (artifact *pc-test*). Echte hardware (geluid, wifi, NFC-lezer) test dat niet.
+
 ## Meer Pi's
 
 Doe stap 1–4 per Pi. Elke Pi krijgt vanzelf een eigen naam (`eventvox-<serienummer>`) en, in EventVOX, een eigen code.
