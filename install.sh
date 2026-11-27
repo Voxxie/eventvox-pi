@@ -57,7 +57,9 @@ CONF="$CONF_DIR/config"
 # shellcheck disable=SC1090
 [ -r "$CONF" ] && . "$CONF"
 KIOSK_USER="${KIOSK_USER:-$(getent passwd 1000 | cut -d: -f1)}"
-URL="${URL:-https://eventvox.nl/scanterminal/?serial={serial}}"
+# Niet ${URL:-…{serial}}: de eerste } sluit de standaardwaarde af, en een eigen URL kreeg er dan een } achter
+DEFAULT_URL='https://eventvox.nl/scanterminal/?serial={serial}'
+URL="${URL:-$DEFAULT_URL}"
 KIOSK_HOME="$(getent passwd "$KIOSK_USER" | cut -d: -f6)"
 if [ -z "$KIOSK_USER" ] || [ ! -d "$KIOSK_HOME" ]; then
   echo "Geen kiosk-gebruiker gevonden. Maak er een in Raspberry Pi Imager (pc: bij de Debian-installatie), of geef KIOSK_USER=naam mee." >&2

@@ -29,3 +29,11 @@ echo "ok   pakket met een kandidaat: installeerbaar (ook met een lange uitvoer e
 echo "ok   alleen genoemd (Candidate: (none)): niet installeerbaar"
 [ "$(check bestaat-niet)" = nee ] || fail "onbekend pakket toch installeerbaar"
 echo "ok   onbekend pakket: niet installeerbaar"
+
+# Het adres: de standaard, of een eigen URL= precies zoals gegeven (eerder kwam er een } achter een eigen adres)
+LINES="$(grep -E '^(DEFAULT_URL=|URL="\$\{URL:-)' "$ROOT/install.sh")"
+[ "$(printf '%s\n' "$LINES" | wc -l)" = 2 ] || fail "regels voor het adres niet gevonden in install.sh"
+url() { env -u URL ${1:+URL="$1"} bash -c "$LINES"'; printf %s "$URL"'; }
+[ "$(url)" = 'https://eventvox.nl/scanterminal/?serial={serial}' ] || fail "standaardadres: $(url)"
+[ "$(url 'https://eigen.example/scan/?serial={serial}')" = 'https://eigen.example/scan/?serial={serial}' ] || fail "eigen adres veranderd: $(url 'https://eigen.example/scan/?serial={serial}')"
+echo "ok   adres: de standaard, en een eigen URL= precies zoals gegeven"

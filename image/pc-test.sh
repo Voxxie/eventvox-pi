@@ -180,7 +180,7 @@ def check(ok, text):
     print(('ok   ' if ok else 'FOUT ') + text)
     if not ok:
         problems.append(text)
-check(('serial=' + serial) in r.get('url', ''), 'Chromium opent het adres met het serienummer uit het BIOS (%s)' % r.get('url'))
+check(r.get('url', '').endswith('?serial=' + serial), 'Chromium opent het adres met het serienummer uit het BIOS (%s)' % r.get('url'))
 check(r.get('serial') == serial, 'WebKiosk.getSerial() = %s' % r.get('serial'))
 check(r.get('info', {}).get('model') == 'Dell Inc. OptiPlex 3060', 'getDeviceInfo().model = %s' % r.get('info', {}).get('model'))
 check(r.get('status', {}).get('app') == 'pi', "getStatus().app = 'pi' (EventVOX-Pi)")
