@@ -1,7 +1,7 @@
 #!/bin/bash
 # ---------------------------------------------------------------------------------------------------------------------
 # EventVOX-Pi: maakt van een Raspberry Pi (3B of nieuwer, Raspberry Pi OS Lite Bookworm) een EventVOX-scanterminal.
-# Ook op een gewone pc (x86, Debian 12 of nieuwer zonder bureaublad): install.sh ziet zelf of het een Pi of een pc is.
+# Ook op een gewone pc (x86, Debian 13 of nieuwer zonder bureaublad): install.sh ziet zelf of het een Pi of een pc is.
 #
 #   curl -fsSLO https://github.com/Voxxie/eventvox-pi/releases/latest/download/install.sh
 #   sudo bash install.sh            eerste keer (na het flashen met Raspberry Pi Imager)
@@ -71,7 +71,15 @@ step() { echo "==> $*"; }
 
 # --- pakketten ----------------------------------------------------------------------------------------------------------
 
-PACKAGES="labwc seatd swayidle wlrctl fonts-liberation python3 iw curl unattended-upgrades pcscd python3-pyscard"
+PACKAGES="labwc seatd swayidle fonts-liberation python3 iw curl unattended-upgrades pcscd python3-pyscard"
+# Nog nooit een pakketlijst opgehaald (een verse Debian): eerst ophalen, anders lijkt alles te ontbreken
+apt-cache show labwc >/dev/null 2>&1 || apt-get update -q || true
+if ! apt-cache show labwc >/dev/null 2>&1; then
+  echo "labwc ontbreekt in de pakketbron. Op een pc: gebruik Debian 13 (trixie) of nieuwer; Debian 12 heeft geen labwc." >&2
+  exit 1
+fi
+# Alleen als de pakketbron hem heeft: wlrctl zet de cursor na 15 s in de hoek (kiosk.sh), niet in elke Debian
+apt-cache show wlrctl >/dev/null 2>&1 && PACKAGES="$PACKAGES wlrctl"
 # Een kale Debian heeft geen sudo (als root een wachtwoord kreeg) en geen NetworkManager (wifi uit EventVOX gaat via nmcli)
 [ "$PLATFORM" = pc ] && PACKAGES="$PACKAGES sudo network-manager alsa-utils"
 if apt-cache show chromium-browser >/dev/null 2>&1; then PACKAGES="$PACKAGES chromium-browser"; else PACKAGES="$PACKAGES chromium"; fi

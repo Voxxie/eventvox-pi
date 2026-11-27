@@ -17,7 +17,7 @@ Hij werkt zichzelf 's nachts bij, en met **Raspberry Pi Connect** kijk je op afs
 
 Uitgebreid, en de manier met het installatiescript voor een Pi die al draait: **[docs/inrichten.md](docs/inrichten.md)**.
 
-**Geen Pi maar een gewone pc?** Installeer Debian 12 zonder bureaublad en draai hetzelfde `install.sh`: zie
+**Geen Pi maar een gewone pc?** Installeer Debian 13 (trixie) zonder bureaublad en draai hetzelfde `install.sh`: zie
 [docs/inrichten.md, Op een gewone pc](docs/inrichten.md#op-een-gewone-pc-debian).
 
 ## Handleiding

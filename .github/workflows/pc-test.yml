@@ -1,6 +1,6 @@
 name: Proef op een pc
 
-# EventVOX-Pi op een nagebootste pc (image/pc-test.sh): kale Debian 12 in QEMU met KVM, install.sh uit deze checkout,
+# EventVOX-Pi op een nagebootste pc (image/pc-test.sh): kale Debian 13 in QEMU met KVM, install.sh uit deze checkout,
 # herstart, en controleren dat Chromium met het serienummer uit het BIOS start en de agent window.WebKiosk zet (met het
 # model van de pc). Schermafbeelding en logboek als artifact. Bij een wijziging in install.sh of pi/, en met de hand.
 on:

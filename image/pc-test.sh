@@ -1,5 +1,5 @@
 #!/bin/bash
-# Proef op een nagebootste pc (QEMU x86-64, met KVM als dat er is): een kale Debian 12 (generic cloud image), install.sh
+# Proef op een nagebootste pc (QEMU x86-64, met KVM als dat er is): een kale Debian 13 (generic cloud image), install.sh
 # uit deze checkout, herstart, en dan controleren of de kiosk echt draait:
 #   - Chromium opent het adres met het serienummer uit het BIOS (QEMU -smbios, zoals een Dell OptiPlex);
 #   - de agent zet window.WebKiosk in de pagina, met dat serienummer en het model "Dell Inc. OptiPlex 3060";
@@ -14,7 +14,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$(mkdir -p "${1:-pc-test-out}" && cd "${1:-pc-test-out}" && pwd)"
 W="$(mktemp -d)"
 TIMEOUT_S="${PC_TEST_TIMEOUT:-2700}"
-IMAGE_URL="${DEBIAN_IMAGE:-https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2}"
+IMAGE_URL="${DEBIAN_IMAGE:-https://cloud.debian.org/images/cloud/trixie/latest/debian-13-generic-amd64.qcow2}"
 PORT=8099
 SERIAL=EVXPC7Q2K9
 QEMU_PID=""
@@ -47,7 +47,7 @@ PY
   [ -s "$OUT/screen.png" ] && echo "    schermafbeelding: $OUT/screen.png"
 }
 
-echo "==> Debian 12 downloaden"
+echo "==> Debian 13 downloaden"
 curl -fsSL -o "$W/base.qcow2" "$IMAGE_URL" || fail "Debian-image niet te downloaden ($IMAGE_URL)"
 qemu-img create -q -f qcow2 -F qcow2 -b "$W/base.qcow2" "$W/disk.qcow2" 10G || fail "schijf maken"
 
