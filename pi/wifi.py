@@ -20,6 +20,15 @@ NMCLI = os.environ.get('NMCLI', 'nmcli')
 PREFIX = 'evx-'
 
 
+def wlan():
+    """De wifi-interface: wlan0 op een Pi, op een pc vaak een andere naam (wlp2s0). Tests: EVX_PI_SYSFS"""
+    base = os.path.join(os.environ.get('EVX_PI_SYSFS', '/sys'), 'class/net')
+    if os.path.exists(os.path.join(base, 'wlan0')) or not os.path.isdir(base):
+        return 'wlan0'
+    names = sorted(n for n in os.listdir(base) if os.path.isdir(os.path.join(base, n, 'wireless')))
+    return names[0] if names else 'wlan0'
+
+
 def nm(*args):
     return subprocess.run([NMCLI, *args], capture_output=True, text=True, timeout=30)
 
@@ -67,7 +76,7 @@ def main():
         con = name(n['ssid'])
         if con in existing:
             nm('connection', 'delete', con)
-        args = ['connection', 'add', 'type', 'wifi', 'con-name', con, 'ifname', 'wlan0', 'ssid', n['ssid'],
+        args = ['connection', 'add', 'type', 'wifi', 'con-name', con, 'ifname', wlan(), 'ssid', n['ssid'],
                 'connection.autoconnect', 'yes', 'connection.autoconnect-priority', str(n['priority'])]
         if n['hidden']:
             args += ['wifi.hidden', 'yes']

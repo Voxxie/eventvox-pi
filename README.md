@@ -17,11 +17,14 @@ Hij werkt zichzelf 's nachts bij, en met **Raspberry Pi Connect** kijk je op afs
 
 Uitgebreid, en de manier met het installatiescript voor een Pi die al draait: **[docs/inrichten.md](docs/inrichten.md)**.
 
+**Geen Pi maar een gewone pc?** Installeer Debian 12 zonder bureaublad en draai hetzelfde `install.sh`: zie
+[docs/inrichten.md, Op een gewone pc](docs/inrichten.md#op-een-gewone-pc-debian).
+
 ## Handleiding
 
 | | |
 |---|---|
-| [Inrichten](docs/inrichten.md) | Een nieuwe Pi klaarmaken, met Raspberry Pi Connect en opties |
+| [Inrichten](docs/inrichten.md) | Een nieuwe Pi klaarmaken, met Raspberry Pi Connect en opties; ook op een gewone pc (Debian) |
 | [Bediening vanuit EventVOX](docs/bediening.md) | Wat je in EventVOX ziet en kunt: opdrachten, instellingen, diagnose |
 | [Bijwerken en releases](docs/bijwerken-en-releases.md) | Hoe de Pi zichzelf bijwerkt, kanalen, een nieuwe versie uitbrengen |
 | [Hoe het werkt](docs/hoe-het-werkt.md) | De onderdelen op de Pi en hoe ze samenwerken |

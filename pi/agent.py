@@ -49,6 +49,9 @@ MAINTENANCE_UPDATE = 'De terminal wordt bijgewerkt. Even geduld: hij start daarn
 MAINTENANCE_REBOOT = 'De terminal start opnieuw op. Even geduld.'
 ROOT_HELPER = '/usr/local/sbin/eventvox-pi-root'
 CONFIG = '/etc/eventvox-pi/config'
+# Tests: EVX_PI_SYSFS = een nagebootst /sys (DMI, netwerk), EVX_PI_DT_MODEL = een nagebootste device tree
+SYSFS = os.environ.get('EVX_PI_SYSFS', '/sys')
+DEVICE_TREE_MODEL = os.environ.get('EVX_PI_DT_MODEL', '/proc/device-tree/model')
 LOG_LINES = 300
 # Alleen op deze pagina's komt window.WebKiosk (de scanterminal, ook op een eigen domein: zie PAGE_MATCH in de config)
 DEFAULT_PAGE_MATCH = r'^https://([a-z0-9-]+\.)*eventvox\.nl/scanterminal'
@@ -255,8 +258,43 @@ def config():
 
 
 def serial():
+    """Raspberry Pi: uit /proc/cpuinfo. Pc: door eventvox-pi-identity (als root, uit het BIOS) in state/serial gezet"""
     m = re.search(r'^Serial\s*:\s*0*([0-9a-fA-F]+)', read_text('/proc/cpuinfo'), re.M)
-    return m.group(1) if m else socket.gethostname()
+    if m:
+        return m.group(1)
+    return read_text(os.path.join(STATE_DIR, 'serial')) or socket.gethostname()
+
+
+def wlan():
+    """De wifi-interface: wlan0 op een Pi, op een pc vaak een andere naam (wlp2s0); None zonder wifi"""
+    if os.path.exists(os.path.join(SYSFS, 'class/net/wlan0')):
+        return 'wlan0'
+    base = os.path.join(SYSFS, 'class/net')
+    names = sorted(n for n in os.listdir(base) if os.path.isdir(os.path.join(base, n, 'wireless'))) if os.path.isdir(base) else []
+    return names[0] if names else None
+
+
+# Wat een fabrikant invult als hij niets weet ("To Be Filled By O.E.M.", "System Product Name", "Default string")
+DMI_JUNK = re.compile(r'o\.?e\.?m|default|system (product )?name|not (specified|applicable)|^none$|^x+$|^\W*$', re.I)
+
+
+def dmi(name):
+    v = read_text(os.path.join(SYSFS, 'class/dmi/id', name)).strip()
+    return '' if DMI_JUNK.search(v) else v
+
+
+def model():
+    """Raspberry Pi: uit de device tree ("Raspberry Pi 4 Model B Rev 1.4"). Pc: fabrikant en model uit het BIOS
+    ("Dell Inc. OptiPlex 3060"; Lenovo zet de naam in product_version: "LENOVO ThinkCentre M720q"); anders None"""
+    pi = read_text(DEVICE_TREE_MODEL).replace('\x00', '').strip()
+    if pi:
+        return pi[:60]
+    vendor, name, version = dmi('sys_vendor'), dmi('product_name'), dmi('product_version')
+    if vendor.lower().startswith('lenovo') and version:
+        name = version
+    if not name:
+        return None
+    return (name if not vendor or name.lower().startswith(vendor.split()[0].lower()) else vendor + ' ' + name)[:60]
 
 
 def run(cmd, timeout=5):
@@ -268,7 +306,10 @@ def run(cmd, timeout=5):
 
 def wifi():
     """Zoals de kiosk-app: { connected, level 0-4, rssi, ssid?, link_speed, frequency }; None zonder wifi op de Pi"""
-    link = run(['iw', 'dev', 'wlan0', 'link'])
+    dev = wlan()
+    if not dev:
+        return None
+    link = run(['iw', 'dev', dev, 'link'])
     if 'Connected to' in link:
         rssi = re.search(r'signal:\s*(-?\d+)', link)
         rssi = int(rssi.group(1)) if rssi else -100
@@ -279,7 +320,7 @@ def wifi():
             if m:
                 out[key] = cast(m.group(1).strip())
         return out
-    return {'connected': False} if os.path.exists('/sys/class/net/wlan0') else None
+    return {'connected': False}
 
 
 def ethernet():
@@ -308,9 +349,9 @@ def uplink():
 def pi_health():
     """{ model, temperature_c, undervoltage, undervoltage_seen, throttled, disk_free_mb, disk_total_mb }, alleen wat bekend is"""
     out = {}
-    model = read_text('/proc/device-tree/model').replace('\x00', '')
-    if model:
-        out['model'] = model[:60]
+    m = model()
+    if m:
+        out['model'] = m
     t = read_text('/sys/class/thermal/thermal_zone0/temp')
     if t.isdigit():
         out['temperature_c'] = round(int(t) / 1000, 1)
@@ -417,7 +458,7 @@ class Agent:
 
     def page_state(self):
         out = {'status': self.status(), 'serial': serial(),
-               'device': {'serial': serial(), 'model': pi_health().get('model', 'Raspberry Pi'), 'appVersion': self.version}}
+               'device': {'serial': serial(), 'model': model() or ('Raspberry Pi' if os.path.exists(DEVICE_TREE_MODEL) else 'PC'), 'appVersion': self.version}}
         if self.diag is not None:
             out['log'] = self.diag
             out['log_id'] = self.log_id
